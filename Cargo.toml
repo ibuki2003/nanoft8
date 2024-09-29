@@ -4,3 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+[dev-dependencies]
+rustfft = "6.2.0"
+num-complex = "0.4.6"
+pulse-simple = "1.0.1"
+hound = "3.5.1"
+chrono = "0.4.38"
+
+[[example]]
+name = "decode_mic"
