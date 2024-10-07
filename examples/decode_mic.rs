@@ -114,8 +114,8 @@ fn main() {
 
 fn hanning_window(data: &mut [Complex32]) {
     let n = data.len();
-    for i in 0..n {
-        data[i] *= 0.5 - 0.5 * (2.0 * std::f32::consts::PI * i as f32 / n as f32).cos();
+    for (i, x) in data.iter_mut().enumerate() {
+        *x *= 0.5 - 0.5 * (2.0 * std::f32::consts::PI * i as f32 / n as f32).cos();
     }
 }
 
@@ -128,11 +128,7 @@ fn print_candidates(c: &[Candidate]) {
 
     let mut buf = [0; 256];
     for i in c.iter().take(10) {
-        let mut s = String::new();
-        for j in i.data.iter() {
-            s += if *j > 0 { "1" } else { "0" };
-        }
-        let bs = Bitset::try_from(&i.data[..77]).unwrap();
+        let bs = to_bits(&i.data);
 
         let str = match Message::decode(&bs) {
             Ok(msg) => {
@@ -142,14 +138,21 @@ fn print_candidates(c: &[Candidate]) {
             Err(_) => "(invalid)".to_string(),
         };
         println!(
-            "{:>5} {:>8.1} {:>8.2} {:>8.2}  {} {}",
+            "{:>5} {:>8.1} {:>8.2} {:>8.2} {}",
             i.dt * 40,
             i.freq as f32 * 3.125,
             i.strength,
             i.reliability,
-            s,
             str
         );
     }
     println!();
+}
+
+fn to_bits(data: &[f32]) -> Bitset {
+    let mut bs = Bitset::default();
+    for (i, &x) in data[..protocol::BODY_BITS].iter().enumerate() {
+        bs.set(i, x > 0.0);
+    }
+    bs
 }
