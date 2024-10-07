@@ -1,4 +1,4 @@
-use crate::protocol::Bitset;
+use crate::Bitset;
 
 pub enum Message {
     FreeText(F71),

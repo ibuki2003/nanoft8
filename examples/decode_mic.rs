@@ -1,6 +1,7 @@
 use chrono::Timelike as _;
 use nanoft8::decoder::{Candidate, Decoder, Spectrum};
-use nanoft8::protocol::{message::Message, Bitset};
+use nanoft8::protocol::message::Message;
+use nanoft8::{protocol, Bitset};
 use num_complex::Complex32;
 
 trait SampleReader {

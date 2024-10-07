@@ -1,14 +1,13 @@
-use super::BODY_BITS;
-
 // bitset that can store up to 96 bits
 // NOTE: inner value is bit-reversed (i.e. 1<<31 represents the first bit in the message)
 #[derive(Debug, Clone, Default)]
 pub struct Bitset([u32; Self::LEN]);
 
 impl Bitset {
-    const SIZE: usize = 96;
-    const LEN: usize = (Self::SIZE + 31) / 32;
+    pub const SIZE: usize = 96;
+    pub const LEN: usize = (Self::SIZE + 31) / 32;
 
+    #[inline]
     pub fn slice(&self, start: usize, size: usize) -> u32 {
         assert!(size <= 32);
         assert!(start + size <= Self::SIZE);
