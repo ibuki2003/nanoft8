@@ -1,5 +1,7 @@
 use core::ops::RangeInclusive;
 
+use super::chars::{CHARS_ALNUM, CHARS_ALNUM_SPC, CHARS_ALPHA_SPC, CHARS_NUMERIC};
+
 pub struct C28(pub u32);
 
 // standard callsigns
@@ -13,26 +15,18 @@ impl C28 {
     pub const CQ: Self = Self(Self::VALUE_CQ);
 
     const VALUE_CQNUM_RANGE: RangeInclusive<u32> = 3..=1002;
-    const VALUE_CQZONE1_RANGE: RangeInclusive<u32> = 1004..=1029;
-    const VALUE_CQZONE2_RANGE: RangeInclusive<u32> = 1031..=1731;
-    const VALUE_CQZONE3_RANGE: RangeInclusive<u32> = 1760..=20685;
-    const VALUE_CQZONE4_RANGE: RangeInclusive<u32> = 21443..=532443;
+    const VALUE_CQZONE_RANGE: RangeInclusive<u32> = 1003..=(1003 + 27 * 27 * 27 * 27);
     const VALUE_HASH_RANGE: RangeInclusive<u32> = 2063592..=(2063592 + (1 << 20) - 1);
     const VALUE_CALLSIGN_RANGE: RangeInclusive<u32> =
         6257896..=(6257896 + 37 * 36 * 10 * 27 * 27 * 27 - 1);
 
-    const CHARS0: &'static [u8] = b" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const CHARS1: &'static [u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const CHARS2: &'static [u8] = b"0123456789";
-    const CHARS3: &'static [u8] = b" ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
     const CHARS: [&'static [u8]; 6] = [
-        Self::CHARS0,
-        Self::CHARS1,
-        Self::CHARS2,
-        Self::CHARS3,
-        Self::CHARS3,
-        Self::CHARS3,
+        CHARS_ALNUM_SPC,
+        CHARS_ALNUM,
+        CHARS_NUMERIC,
+        CHARS_ALPHA_SPC,
+        CHARS_ALPHA_SPC,
+        CHARS_ALPHA_SPC,
     ];
 
     fn normalize_callsign(call: &[u8], idx: &mut [u8]) -> bool {
@@ -91,18 +85,9 @@ impl C28 {
             out[4] = b'0' + (num % 10) as u8;
             num /= 10;
             out[5] = b'0' + num as u8;
-        } else if Self::VALUE_CQZONE1_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"CQ _   ");
-            num_to_alphas(self.0 - Self::VALUE_CQZONE1_RANGE.start(), &mut out[3..4]);
-        } else if Self::VALUE_CQZONE2_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"CQ __  ");
-            num_to_alphas(self.0 - Self::VALUE_CQZONE2_RANGE.start(), &mut out[3..5]);
-        } else if Self::VALUE_CQZONE3_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"CQ ___ ");
-            num_to_alphas(self.0 - Self::VALUE_CQZONE3_RANGE.start(), &mut out[3..6]);
-        } else if Self::VALUE_CQZONE4_RANGE.contains(&self.0) {
+        } else if Self::VALUE_CQZONE_RANGE.contains(&self.0) {
             out.copy_from_slice(b"CQ ____");
-            num_to_alphas(self.0 - Self::VALUE_CQZONE4_RANGE.start(), &mut out[3..7]);
+            num_to_alphas(self.0 - Self::VALUE_CQZONE_RANGE.start(), &mut out[3..7]);
         } else if Self::VALUE_HASH_RANGE.contains(&self.0) {
             out.copy_from_slice(b"<.....>");
             // TODO:
@@ -151,8 +136,8 @@ fn alphas_to_num(seq: &[u8]) -> u32 {
 
 fn num_to_alphas(mut val: u32, seq: &mut [u8]) {
     for x in seq.iter_mut().rev() {
-        *x = b'A' + (val % 26) as u8;
-        val /= 26;
+        *x = CHARS_ALPHA_SPC[(val % 27) as usize];
+        val /= 27;
     }
     debug_assert_eq!(val, 0);
 }
@@ -216,10 +201,11 @@ mod tests {
             (C28::VALUE_QRZ, b"QRZ    "),
             (C28::VALUE_CQ, b"CQ     "),
             (*C28::VALUE_CQNUM_RANGE.start(), b"CQ 000 "),
-            (*C28::VALUE_CQZONE1_RANGE.start(), b"CQ A   "),
-            (*C28::VALUE_CQZONE2_RANGE.start(), b"CQ AA  "),
-            (*C28::VALUE_CQZONE3_RANGE.start(), b"CQ AAA "),
-            (*C28::VALUE_CQZONE4_RANGE.start(), b"CQ AAAA"),
+            (1004, b"CQ    A"),
+            (1031, b"CQ   AA"),
+            (1760, b"CQ  AAA"),
+            (21443, b"CQ AAAA"),
+            (532443, b"CQ ZZZZ"),
             // (*C28::VALUE_HASH_RANGE.start(), b"<.....>"),
         ];
         for (num, ret) in TESTCASES {

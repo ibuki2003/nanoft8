@@ -1,5 +1,7 @@
 use crate::Bitset;
 
+pub mod chars;
+
 pub enum Message {
     FreeText(F71),
     DXpedition,
