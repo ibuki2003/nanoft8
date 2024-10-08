@@ -57,7 +57,7 @@ impl Message {
                 call2: C28(bs.slice(29, 28)),
                 call2_r: bs.get(57),
                 r: bs.get(58),
-                grid: G15(bs.slice(59, 3) as u16),
+                grid: G15(bs.slice(59, 15) as u16),
             }),
 
             2 => Ok(Self::EuVhf {
@@ -66,7 +66,7 @@ impl Message {
                 call2: C28(bs.slice(29, 28)),
                 call2_p: bs.get(57),
                 r: bs.get(58),
-                grid: G15(bs.slice(59, 3) as u16),
+                grid: G15(bs.slice(59, 15) as u16),
             }),
             3 => Ok(Self::RttyRu),
             4 => Ok(Self::NonStdCall {
@@ -126,7 +126,8 @@ impl Message {
                 if *r {
                     out[20] = b'R';
                 }
-                // g15.to_string(&mut out[14..17]);
+
+                grid.to_string(&mut out[22..26]);
             }
             Self::EuVhf {
                 call1,
@@ -150,6 +151,8 @@ impl Message {
                 if *r {
                     out[20] = b'R';
                 }
+
+                grid.to_string(&mut out[22..26]);
             }
             Self::RttyRu => {
                 // K1ABC W9XYZ 579 WI
@@ -173,10 +176,12 @@ impl Message {
 mod callsign28;
 pub use callsign28::C28;
 
+mod grid15;
+pub use grid15::G15;
+
 // TODO: implement these mocks
 pub struct C58(u64); // NonStdCall
 pub struct F71(Bitset); // free text
-pub struct G15(u16); // grid locator 4
 pub struct H12(u16); // hash
 pub struct R2(u8); // RRR message
 pub struct T71(Bitset); // telemetry data
