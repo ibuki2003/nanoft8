@@ -1,7 +1,8 @@
 use chrono::Timelike as _;
 use nanoft8::decoder::{Candidate, Decoder, Spectrum};
+use nanoft8::protocol::crc::check_crc;
 use nanoft8::protocol::message::Message;
-use nanoft8::{protocol, Bitset};
+use nanoft8::{protocol, Bitset, F8};
 use num_complex::Complex32;
 
 trait SampleReader {
@@ -74,14 +75,14 @@ fn main() {
     let mut planner = rustfft::FftPlanner::new();
     let fft = planner.plan_fft_forward(size * 2);
 
-    let mut spectrum: Spectrum = [0.0; 1024];
+    let mut spectrum: Spectrum = [F8::ZERO; 1024];
 
     let mut reset = false;
     for i in 0.. {
         if incremental && !reset && sec() % 15 == 0 {
-            println!("reset");
             reset = true;
             print_candidates(&decoder.candidates);
+            println!("reset");
             decoder = Decoder::default();
         }
         if sec() % 15 != 0 {
@@ -100,11 +101,11 @@ fn main() {
         hanning_window(&mut fftbuf);
         fft.process(&mut fftbuf);
         fftbuf[..1024].iter().enumerate().for_each(|(i, x)| {
-            spectrum[i] = x.norm();
+            spectrum[i] = x.norm().into();
         });
         decoder.put_spectrum(&spectrum);
 
-        // if incremental && i % 10 == 0 {
+        // if incremental && i % 20 == 0 {
         //     println!("{}", i);
         //     print_candidates(&decoder.candidates);
         // }
@@ -119,6 +120,9 @@ fn hanning_window(data: &mut [Complex32]) {
     }
 }
 
+const COLOR_GRAY: &str = "\x1b[38;5;240m";
+const COLOR_RESET: &str = "\x1b[0m";
+
 fn print_candidates(c: &[Candidate]) {
     let mut c = Vec::from(c);
     c.sort_by_cached_key(|x| x.reliability.to_bits());
@@ -127,8 +131,24 @@ fn print_candidates(c: &[Candidate]) {
     // print!("\x1b[2J\x1b[1;1H"); // clear screen
 
     let mut buf = [0; 256];
-    for i in c.iter().take(10) {
-        let bs = to_bits(&i.data);
+    println!(
+        "{:>5} {:>8} {:>8} {:>8}  {:>3} {}",
+        "dt", "freq", "strength", "reliab", "err", "message"
+    );
+    let mut cnt = 0;
+    for i in c.iter() {
+        if i.reliability < 1.0 {
+            continue;
+        }
+        if cnt >= 15 {
+            break;
+        }
+        cnt += 1;
+
+        let mut bs = Bitset::default();
+        let err = protocol::ldpc::solve(&i.data, &mut bs);
+
+        let res = check_crc(&bs);
 
         let str = match Message::decode(&bs) {
             Ok(msg) => {
@@ -138,21 +158,16 @@ fn print_candidates(c: &[Candidate]) {
             Err(_) => "(invalid)".to_string(),
         };
         println!(
-            "{:>5} {:>8.1} {:>8.2} {:>8.2} {}",
+            "{}{:>5} {:>8.1} {:>8.2} {:>8.2}  {:>3} {}{}",
+            if res { "" } else { COLOR_GRAY },
             i.dt * 40,
             i.freq as f32 * 3.125,
             i.strength,
             i.reliability,
-            str
+            err,
+            str,
+            COLOR_RESET
         );
     }
     println!();
-}
-
-fn to_bits(data: &[f32]) -> Bitset {
-    let mut bs = Bitset::default();
-    for (i, &x) in data[..protocol::BODY_BITS].iter().enumerate() {
-        bs.set(i, x > 0.0);
-    }
-    bs
 }
