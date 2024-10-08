@@ -1,6 +1,6 @@
 use core::ops::RangeInclusive;
 
-use super::chars::{CHARS_ALNUM, CHARS_ALNUM_SPC, CHARS_ALPHA_SPC, CHARS_NUMERIC};
+use super::chars::Chars;
 
 pub struct C28(pub u32);
 
@@ -20,13 +20,13 @@ impl C28 {
     const VALUE_CALLSIGN_RANGE: RangeInclusive<u32> =
         6257896..=(6257896 + 37 * 36 * 10 * 27 * 27 * 27 - 1);
 
-    const CHARS: [&'static [u8]; 6] = [
-        CHARS_ALNUM_SPC,
-        CHARS_ALNUM,
-        CHARS_NUMERIC,
-        CHARS_ALPHA_SPC,
-        CHARS_ALPHA_SPC,
-        CHARS_ALPHA_SPC,
+    const CHARS: [Chars; 6] = [
+        Chars::AlnumSpc,
+        Chars::Alnum,
+        Chars::Numeric,
+        Chars::AlphaSpc,
+        Chars::AlphaSpc,
+        Chars::AlphaSpc,
     ];
 
     fn normalize_callsign(call: &[u8], idx: &mut [u8]) -> bool {
@@ -43,8 +43,8 @@ impl C28 {
             }
 
             for (i, &c) in call.iter().enumerate() {
-                match Self::CHARS[i + ofs].iter().position(|&x| x == c) {
-                    Some(x) => idx[i + ofs] = x as u8,
+                match Self::CHARS[i + ofs].find(c) {
+                    Some(x) => idx[i + ofs] = x,
                     None => continue 'outer,
                 }
             }
@@ -120,7 +120,7 @@ impl C28 {
         idx[0] = (val % 39) as u8;
 
         for (i, &x) in idx.iter().enumerate() {
-            out[i] = Self::CHARS[i][x as usize];
+            out[i] = Self::CHARS[i][x];
         }
         out
     }
@@ -136,7 +136,7 @@ fn alphas_to_num(seq: &[u8]) -> u32 {
 
 fn num_to_alphas(mut val: u32, seq: &mut [u8]) {
     for x in seq.iter_mut().rev() {
-        *x = CHARS_ALPHA_SPC[(val % 27) as usize];
+        *x = Chars::AlphaSpc[(val % 27) as u8];
         val /= 27;
     }
     debug_assert_eq!(val, 0);
@@ -159,7 +159,7 @@ mod tests {
         for (call, out) in TESTCASES {
             assert!(C28::normalize_callsign(call, &mut buf1));
             for i in 0..6 {
-                buf2[i] = C28::CHARS[i][buf1[i] as usize];
+                buf2[i] = C28::CHARS[i][buf1[i]];
             }
             assert_eq!(out, out);
         }
