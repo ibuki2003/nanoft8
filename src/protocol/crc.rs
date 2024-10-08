@@ -1,5 +1,5 @@
-use crate::Bitset;
 use super::{BODY_BITS, CRC_BITS};
+use crate::Bitset;
 
 // pub const POLY: u16 = 0x6757;
 pub const POLY: u16 = 0x6757;

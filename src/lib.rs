@@ -5,3 +5,6 @@ pub mod protocol;
 
 mod bits;
 pub use bits::Bitset;
+
+mod f8;
+pub use f8::F8;

@@ -1,9 +1,9 @@
-use crate::protocol;
+use crate::{protocol, F8};
 
 const SPECTRUM_SIZE: usize = 1024;
 
 // TODO: use 8bit integers to save space
-pub type Spectrum = [f32; SPECTRUM_SIZE];
+pub type Spectrum = [F8; SPECTRUM_SIZE];
 
 #[derive(Copy, Clone, Debug)]
 pub struct Candidate {
@@ -13,7 +13,7 @@ pub struct Candidate {
     pub reliability: f32,
 
     // supply default impl
-    pub data: [i8; protocol::PAYLOAD_BITS],
+    pub data: [F8; protocol::PAYLOAD_BITS],
 }
 
 impl Default for Candidate {
@@ -23,7 +23,7 @@ impl Default for Candidate {
             freq: 0,
             strength: 0.0,
             reliability: 0.0,
-            data: [0; protocol::PAYLOAD_BITS],
+            data: [F8::ZERO; protocol::PAYLOAD_BITS],
         }
     }
 }
@@ -57,7 +57,7 @@ impl Default for Decoder {
     fn default() -> Self {
         Self {
             time_step: 0,
-            spectrum_buffer: [[0.0; SPECTRUM_SIZE]; Self::BUFFER_SIZE],
+            spectrum_buffer: [[F8::ZERO; SPECTRUM_SIZE]; Self::BUFFER_SIZE],
             candidates: [Candidate::default(); Self::CANDIDATES_COUNT],
         }
     }
@@ -95,9 +95,10 @@ impl Decoder {
                 for j in [1, Self::BUFFER_SIZE - 24] {
                     for (k, &marker) in protocol::MARKER_COSTAS.iter().enumerate() {
                         let idx = (self.time_step + j + k * Self::TIME_SCALE) % Self::BUFFER_SIZE;
-                        power += self.spectrum_buffer[idx][i + marker * Self::FREQ_SCALE];
+                        power += self.spectrum_buffer[idx][i + marker * Self::FREQ_SCALE].as_f32();
                         for k in 0..protocol::COSTAS_SIZE {
-                            band_power += self.spectrum_buffer[idx][i + k * Self::FREQ_SCALE];
+                            band_power +=
+                                self.spectrum_buffer[idx][i + k * Self::FREQ_SCALE].as_f32();
                         }
                     }
                 }
@@ -109,7 +110,7 @@ impl Decoder {
                         freq: i,
                         strength: power,
                         reliability,
-                        data: [0; protocol::PAYLOAD_BITS],
+                        data: [F8::ZERO; protocol::PAYLOAD_BITS],
                     };
                     let old_candidate = &mut self.candidates[i / Self::CANDIDATES_BUCKET_SIZE];
 
@@ -152,22 +153,22 @@ impl Decoder {
         self.time_step += 1;
     }
 
-    fn get_likelihood(data: &[f32], out: &mut [i8]) {
+    fn get_likelihood(data: &[F8], out: &mut [F8]) {
         assert_eq!(data.len(), Self::FREQ_WIDTH);
         assert_eq!(out.len(), protocol::FSK_DEPTH);
-        // TODO: calculate likelihood
 
-        // out.iter_mut().for_each(|x| *x = 0);
-
-        let mut max_idx = 0;
-        for i in 0..8 {
-            if data[i * Self::FREQ_SCALE] > data[max_idx * Self::FREQ_SCALE] {
-                max_idx = i;
+        let mut outf = [[0.0f32; 2]; protocol::FSK_DEPTH];
+        for i in 0..protocol::FSK_ARITY {
+            for j in 0..protocol::FSK_DEPTH {
+                let bit = (protocol::GRAY_CODE[i] & (4 >> j) != 0) as usize;
+                // outf[j][bit] += data[i * Self::FREQ_SCALE];
+                outf[j][bit] = outf[j][bit].max(data[i * Self::FREQ_SCALE].as_f32());
             }
         }
-        let val = protocol::GRAY_CODE[max_idx];
-        out[0] = if (val & 0b100) != 0 { 1 } else { -1 };
-        out[1] = if (val & 0b010) != 0 { 1 } else { -1 };
-        out[2] = if (val & 0b001) != 0 { 1 } else { -1 };
+
+        for i in 0..protocol::FSK_DEPTH {
+            let v = outf[i][1].ln() - outf[i][0].ln();
+            out[i] = F8::from_f32(v * 2.);
+        }
     }
 }

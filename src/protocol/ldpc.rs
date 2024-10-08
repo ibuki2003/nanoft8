@@ -1,5 +1,5 @@
 use super::{BODY_BITS, CRC_BITS, PAYLOAD_BITS};
-use crate::Bitset;
+use crate::{Bitset, F8};
 
 const V_SIZE: usize = PAYLOAD_BITS;
 const C_SIZE: usize = 83;
@@ -30,8 +30,14 @@ fn check(message: &FullMessageBits) -> u8 {
 // solve the parity check equations
 // out: the message bits
 // returns the number of errors
-pub fn solve(message: &[f32], out: &mut Bitset) -> u8 {
+pub fn solve(message: &[F8], out: &mut Bitset) -> u8 {
     debug_assert!(message.len() == V_SIZE);
+
+    let mut message_f32 = [0.0f32; V_SIZE];
+    for (i, &b) in message.iter().enumerate() {
+        message_f32[i] = b.into();
+    }
+
     let mut plain = [false; V_SIZE];
 
     let mut tov = [[0.0f32; TABLE_VC_LEN]; V_SIZE];
@@ -45,7 +51,7 @@ pub fn solve(message: &[f32], out: &mut Bitset) -> u8 {
         // check
 
         for i in 0..V_SIZE {
-            plain[i] = (message[i] + tov[i].iter().sum::<f32>()) > 0.0;
+            plain[i] = (message_f32[i] + tov[i].iter().sum::<f32>()) > 0.0;
         }
 
         last_err = check(&plain);
@@ -70,7 +76,7 @@ pub fn solve(message: &[f32], out: &mut Bitset) -> u8 {
                 if n == EOL {
                     break;
                 }
-                let mut sum = message[n as usize];
+                let mut sum = message_f32[n as usize];
                 for (j, &m1) in TABLE_VC[n as usize].iter().enumerate() {
                     if m1 != m as u8 {
                         sum += tov[n as usize][j];
