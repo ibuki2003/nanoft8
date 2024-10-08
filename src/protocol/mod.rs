@@ -22,3 +22,4 @@ pub const GRAY_CODE: [u8; FSK_ARITY] = [0b000, 0b001, 0b011, 0b010, 0b110, 0b100
 pub mod message;
 
 pub mod crc;
+pub mod ldpc;
