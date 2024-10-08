@@ -6,6 +6,10 @@ edition = "2021"
 [dependencies]
 macro_find_and_replace = "1.0.0"
 
+[features]
+default = []
+no_std = []
+
 [dev-dependencies]
 rustfft = "6.2.0"
 num-complex = "0.4.6"
