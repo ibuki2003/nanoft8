@@ -35,6 +35,23 @@ pub enum Message {
     EuVhfHash,
 }
 
+macro_rules! writes_str {
+    (
+        $out:ident;
+        $( $len:expr => $body: stmt );*
+        $(;)?
+    ) => {
+        {
+            let mut i_ = 0;
+            $(
+                macro_find_and_replace::replace_token!(_, (&mut $out[i_..i_+$len]), $body);
+                i_ += $len;
+            )*
+            i_
+        };
+    };
+}
+
 impl Message {
     pub fn decode(bs: &Bitset) -> Result<Self, ()> {
         let i3 = bs.slice(74, 3);
@@ -112,22 +129,19 @@ impl Message {
                 r,
                 grid,
             } => {
-                // K1ABC/R W9XYZ/R R EN37
-                call1.to_string(&mut out[0..7]);
-                if *call1_r {
-                    out[7..9].copy_from_slice(b"/R");
-                }
-
-                call2.to_string(&mut out[10..17]);
-                if *call2_r {
-                    out[17..19].copy_from_slice(b"/R");
-                }
-
-                if *r {
-                    out[20] = b'R';
-                }
-
-                grid.to_string(&mut out[22..26]);
+                // // K1ABC/R W9XYZ/R R EN37
+                writes_str! { out;
+                    7 => _.copy_from_slice(b"StdMsg ");
+                    7 => call1.to_string(_);
+                    2 => if *call1_r { _.copy_from_slice(b"/R") };
+                    1 => {};
+                    7 => call2.to_string(_);
+                    2 => if *call2_r { _.copy_from_slice(b"/R") };
+                    1 => {};
+                    1 => if *r { _.copy_from_slice(b"R") };
+                    1 => {};
+                    4 => grid.to_string(_);
+                };
             }
             Self::EuVhf {
                 call1,
@@ -138,36 +152,38 @@ impl Message {
                 grid,
             } => {
                 // G4ABC/P PA9XYZ JO22
-                call1.to_string(&mut out[0..7]);
-                if *call1_p {
-                    out[7..9].copy_from_slice(b"/P");
-                }
+                writes_str! { out;
+                    7 => _.copy_from_slice(b"EuVhf  ");
+                    7 => call1.to_string(_);
+                    2 => if *call1_p { _.copy_from_slice(b"/P") };
+                    1 => {};
+                    7 => call2.to_string(_);
+                    2 => if *call2_p { _.copy_from_slice(b"/P") };
+                    1 => {};
+                    1 => if *r { _.copy_from_slice(b"R") };
+                    1 => {};
+                    4 => grid.to_string(_);
+                };
 
-                call2.to_string(&mut out[10..17]);
-                if *call2_p {
-                    out[17..19].copy_from_slice(b"/P");
-                }
-
-                if *r {
-                    out[20] = b'R';
-                }
-
-                grid.to_string(&mut out[22..26]);
             }
             Self::RttyRu => {
                 // K1ABC W9XYZ 579 WI
-                out[..6].copy_from_slice(b"RttyRu");
+                writes_str! { out;
+                    6 => _.copy_from_slice(b"RttyRu");
+                };
             }
             Self::NonStdCall { .. } => {
                 // <W9XYZ> PJ4/K1ABC RRR
-                // unimplemented!()
-                out[..10].copy_from_slice(b"NonStdCall");
-                // h12.to_string(&mut out[..5]);
-                // c58.to_string(&mut out[5..13]);
+                writes_str! { out;
+                    10 => _.copy_from_slice(b"NonStdCall");
+                };
+
             }
             Self::EuVhfHash => {
                 // <G4ABC> <PA9XYZ> R 570007 JO22DB
-                out[..9].copy_from_slice(b"EuVhfHash");
+                writes_str! { out;
+                    9 => _.copy_from_slice(b"EuVhfHash");
+                };
             }
         }
     }
@@ -198,3 +214,4 @@ pub struct T71(Bitset); // telemetry data
 // pub struct S11; // sreial number
 // pub struct S13; // serial number
 // pub struct S7; // section name
+

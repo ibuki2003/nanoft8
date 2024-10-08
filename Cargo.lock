@@ -138,11 +138,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
+name = "macro_find_and_replace"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3c5eef824b07f20e21212f95520a9b29007258680db871e2a146d7accc0dca6"
+
+[[package]]
 name = "nanoft8"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "hound",
+ "macro_find_and_replace",
  "num-complex",
  "pulse-simple",
  "rustfft",
