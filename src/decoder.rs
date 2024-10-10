@@ -30,7 +30,7 @@ impl Default for Candidate {
 
 impl Ord for Candidate {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        self.strength.partial_cmp(&other.strength).unwrap()
+        self.reliability.partial_cmp(&other.reliability).unwrap()
     }
 }
 impl Eq for Candidate {}
@@ -161,14 +161,13 @@ impl Decoder {
         for i in 0..protocol::FSK_ARITY {
             for j in 0..protocol::FSK_DEPTH {
                 let bit = (protocol::GRAY_CODE[i] & (4 >> j) != 0) as usize;
-                // outf[j][bit] += data[i * Self::FREQ_SCALE];
-                outf[j][bit] = outf[j][bit].max(data[i * Self::FREQ_SCALE].as_f32());
+                outf[j][bit] += data[i * Self::FREQ_SCALE].as_f32().powf(2.);
             }
         }
 
         for i in 0..protocol::FSK_DEPTH {
             let v = outf[i][1].ln() - outf[i][0].ln();
-            out[i] = F8::from_f32(v * 2.);
+            out[i] = F8::from_f32(v);
         }
     }
 }
