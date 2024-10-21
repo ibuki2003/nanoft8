@@ -5,32 +5,6 @@ use nanoft8::protocol::message::Message;
 use nanoft8::{protocol, Bitset, F8};
 use num_complex::Complex32;
 
-trait SampleReader {
-    fn read(&mut self, buf: &mut [i16]) -> bool;
-}
-
-impl SampleReader for pulse_simple::Record<[i16; 1]> {
-    fn read(&mut self, buf: &mut [i16]) -> bool {
-        let buf = unsafe {
-            core::slice::from_raw_parts_mut(buf.as_mut_ptr() as *mut [i16; 1], buf.len())
-        };
-        pulse_simple::Record::read(self, buf);
-        true
-    }
-}
-
-impl SampleReader for std::vec::IntoIter<i16> {
-    fn read(&mut self, buf: &mut [i16]) -> bool {
-        for x in buf.iter_mut() {
-            match self.next() {
-                Some(v) => *x = v,
-                None => return false,
-            }
-        }
-        true
-    }
-}
-
 #[inline]
 fn sec() -> u32 {
     chrono::Utc::now().second()
@@ -39,36 +13,72 @@ fn sec() -> u32 {
 fn main() {
     let args = std::env::args().collect::<Vec<String>>();
 
-    let incremental = args.len() < 2;
-
-    let (mut source, rate): (Box<dyn SampleReader>, u32) = if incremental {
+    if args.len() < 2 {
+        // from mic
         let rec = pulse_simple::Record::new("nanoft8", "hoge", None, 48000);
-        (Box::new(rec), 48000)
+        let mut buf = [[0f32; 1]; 1024];
+        loop {
+            let mut idx = 0;
+            let mut iter = std::iter::from_fn(|| {
+                if sec() % 15 == 0 {
+                    return None;
+                }
+                if idx == 0 {
+                    rec.read(&mut buf);
+                }
+                let ret = Some(buf[idx][0]);
+                idx = (idx + 1) % 1024;
+                ret
+            });
+            process(&mut iter, 48000);
+        }
     } else {
-        let filename = args[1].clone();
-        let mut reader = hound::WavReader::open(filename).unwrap();
-        println!("{:?}", reader.spec());
-        let rate = reader.spec().sample_rate;
-        let ch = reader.spec().channels;
-        let samples = reader
-            .samples::<i16>()
-            .map(|x| x.unwrap())
-            .step_by(ch as usize)
-            .collect::<Vec<_>>();
-        println!(
-            "read {} samples ({} sec)",
-            samples.len(),
-            samples.len() as f32 / rate as f32
-        );
-        (Box::new(samples.into_iter()), rate)
-    };
+        // from file
+        for f in &args[1..] {
+            println!("reading file: {}", f);
 
+            let mut reader = hound::WavReader::open(f).unwrap();
+            let spec = reader.spec();
+            println!("{:?}", spec);
+            let rate = spec.sample_rate;
+            let ch = spec.channels;
+            let fmt = spec.sample_format;
+            let len = reader.len() / ch as u32;
+            println!("has {} samples ({:.1} sec)", len, len as f32 / rate as f32);
+
+            let mut samples: Box<dyn Iterator<Item = f32>> = match fmt {
+                hound::SampleFormat::Float => Box::new(
+                    reader
+                        .samples::<f32>()
+                        .step_by(ch as usize)
+                        .map(|x| x.unwrap()),
+                ),
+                hound::SampleFormat::Int => Box::new(
+                    reader
+                        .samples::<i16>()
+                        .step_by(ch as usize)
+                        .map(|x| x.unwrap() as f32 / 32768.0),
+                ),
+            };
+            // run for each 15sec
+            let cnt = (len - (5 * rate) + (rate * 15 - 1)) / rate / 15; // ceil
+            for i in 0..cnt {
+                println!("processing at {}", i * 15);
+                let mut iter = TakeAndSkip::new(samples, 15 * rate as usize);
+                process(&mut iter, rate);
+                samples = iter.destroy();
+            }
+        }
+    }
+}
+
+fn process(source: &mut dyn Iterator<Item = f32>, rate: u32) {
     let mut decoder = Decoder::default();
 
     let step: usize = (rate * 40 / 1000) as usize;
     let size: usize = (rate * 160 / 1000) as usize;
 
-    let mut buf = vec![0; size];
+    let mut buf = vec![0f32; size];
 
     let mut fftbuf = vec![Complex32::new(0.0, 0.0); size * 2];
 
@@ -77,26 +87,19 @@ fn main() {
 
     let mut spectrum: Spectrum = [F8::ZERO; 1024];
 
-    let mut reset = false;
-    for i in 0.. {
-        if incremental && !reset && sec() % 15 == 0 {
-            reset = true;
-            print_candidates(&decoder.candidates);
-            println!("reset");
-            decoder = Decoder::default();
-        }
-        if sec() % 15 != 0 {
-            reset = false;
-        }
-        if !source.read(&mut buf[(i % 4) * step..][..step]) {
-            break;
+    'outer: for i in 0.. {
+        for j in 0..step {
+            match source.next() {
+                Some(v) => buf[(i % 4) * step + j] = v,
+                None => break 'outer,
+            }
         }
 
         fftbuf
             .iter_mut()
             .for_each(|x| *x = Complex32::new(0.0, 0.0));
         for j in 0..size {
-            fftbuf[j].re = buf[((i+1) * step + j) % size] as f32 / 32768.0;
+            fftbuf[j].re = buf[((i + 1) * step + j) % size] as f32;
         }
         hanning_window(&mut fftbuf[..size]);
         fft.process(&mut fftbuf);
@@ -104,11 +107,6 @@ fn main() {
             spectrum[i] = x.norm().into();
         });
         decoder.put_spectrum(&spectrum);
-
-        // if incremental && i % 20 == 0 {
-        //     println!("{}", i);
-        //     print_candidates(&decoder.candidates);
-        // }
     }
     print_candidates(&decoder.candidates);
 }
@@ -125,8 +123,10 @@ const COLOR_RESET: &str = "\x1b[0m";
 
 fn print_candidates(c: &[Candidate]) {
     let mut c = Vec::from(c);
+    // c.sort_by_cached_key(|x| x.strength.to_bits());
     c.sort_by_cached_key(|x| x.reliability.to_bits());
     c.reverse();
+    // c.sort_by_cached_key(|x| x.freq);
 
     // print!("\x1b[2J\x1b[1;1H"); // clear screen
 
@@ -140,15 +140,16 @@ fn print_candidates(c: &[Candidate]) {
         if i.reliability < 1.0 {
             continue;
         }
-        if cnt >= 15 {
-            break;
-        }
         cnt += 1;
 
         let mut bs = Bitset::default();
         let err = protocol::ldpc::solve(&i.data, &mut bs);
 
         let res = check_crc(&bs);
+
+        if !res && cnt >= 10 {
+            continue;
+        }
 
         let str = match Message::decode(&bs) {
             Ok(msg) => {
@@ -170,4 +171,31 @@ fn print_candidates(c: &[Candidate]) {
         );
     }
     println!();
+}
+
+struct TakeAndSkip<I: Iterator> {
+    iter: I,
+    count: usize,
+}
+
+impl<I: Iterator> Iterator for TakeAndSkip<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.count == 0 {
+            return None;
+        }
+        self.count -= 1;
+        self.iter.next()
+    }
+}
+
+impl<I: Iterator> TakeAndSkip<I> {
+    fn new(iter: I, count: usize) -> Self {
+        Self { iter, count }
+    }
+
+    fn destroy(self) -> I {
+        self.iter
+    }
 }
