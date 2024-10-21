@@ -96,9 +96,9 @@ fn main() {
             .iter_mut()
             .for_each(|x| *x = Complex32::new(0.0, 0.0));
         for j in 0..size {
-            fftbuf[j].re = buf[(i * step + j) % size] as f32 / 32768.0;
+            fftbuf[j].re = buf[((i+1) * step + j) % size] as f32 / 32768.0;
         }
-        hanning_window(&mut fftbuf);
+        hanning_window(&mut fftbuf[..size]);
         fft.process(&mut fftbuf);
         fftbuf[..1024].iter().enumerate().for_each(|(i, x)| {
             spectrum[i] = x.norm().into();
