@@ -28,23 +28,6 @@ impl Default for Candidate {
     }
 }
 
-impl Ord for Candidate {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        self.reliability.partial_cmp(&other.reliability).unwrap()
-    }
-}
-impl Eq for Candidate {}
-impl PartialOrd for Candidate {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl PartialEq for Candidate {
-    fn eq(&self, other: &Self) -> bool {
-        self.strength == other.strength
-    }
-}
-
 pub struct Decoder {
     pub time_step: usize,
 
@@ -87,7 +70,7 @@ impl Decoder {
 
         if self.time_step < Self::BUFFER_SIZE - 1 {
             // data not enough; do nothing
-        } else if self.time_step < Self::BUFFER_SIZE * 2 {
+        } else if self.time_step < Self::BUFFER_SIZE * 3 / 2 {
             // find markers
             for i in 0..SPECTRUM_SIZE - Self::FREQ_WIDTH {
                 let mut power: f32 = 0.0;
@@ -105,17 +88,16 @@ impl Decoder {
                 band_power = (band_power - power) / (protocol::COSTAS_SIZE - 1) as f32;
                 let reliability = power / band_power;
                 if reliability > Self::DECODE_THRESHOLD {
-                    let candidate = Candidate {
-                        dt: self.time_step + 1 - Self::BUFFER_SIZE,
-                        freq: i,
-                        strength: power,
-                        reliability,
-                        data: [F8::ZERO; protocol::PAYLOAD_BITS],
-                    };
-                    let old_candidate = &mut self.candidates[i / Self::CANDIDATES_BUCKET_SIZE];
+                    let candidate = &mut self.candidates[i / Self::CANDIDATES_BUCKET_SIZE];
 
-                    if *old_candidate < candidate {
-                        *old_candidate = candidate;
+                    if candidate.reliability < reliability {
+                        *candidate = Candidate {
+                            dt: self.time_step + 1 - Self::BUFFER_SIZE,
+                            freq: i,
+                            strength: power,
+                            reliability,
+                            data: [F8::ZERO; protocol::PAYLOAD_BITS],
+                        };
                         // decode data
                         for j in 0..protocol::PAYLOAD_HALF_LEN {
                             Self::get_likelihood(
@@ -123,7 +105,7 @@ impl Decoder {
                                     + 1
                                     + (protocol::COSTAS_SIZE + j) * Self::TIME_SCALE)
                                     % Self::BUFFER_SIZE][i..i + Self::FREQ_WIDTH],
-                                &mut old_candidate.data
+                                &mut candidate.data
                                     [j * protocol::FSK_DEPTH..(j + 1) * protocol::FSK_DEPTH],
                             );
                         }
@@ -159,9 +141,9 @@ impl Decoder {
 
         let mut outf = [[0.0f32; 2]; protocol::FSK_DEPTH];
         for i in 0..protocol::FSK_ARITY {
-            for j in 0..protocol::FSK_DEPTH {
+            for (j, out) in outf.iter_mut().enumerate() {
                 let bit = (protocol::GRAY_CODE[i] & (4 >> j) != 0) as usize;
-                outf[j][bit] += data[i * Self::FREQ_SCALE].as_f32().powf(2.);
+                out[bit] += data[i * Self::FREQ_SCALE].as_f32().powf(2.);
             }
         }
 
