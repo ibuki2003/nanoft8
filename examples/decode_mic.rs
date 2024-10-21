@@ -163,7 +163,7 @@ fn print_candidates(c: &[Candidate]) {
             if res { "" } else { COLOR_GRAY },
             i.dt * 40,
             i.freq as f32 * 3.125,
-            i.strength,
+            i.snr_db(),
             i.reliability,
             err,
             str,

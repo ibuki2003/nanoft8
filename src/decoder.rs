@@ -9,11 +9,42 @@ pub type Spectrum = [F8; SPECTRUM_SIZE];
 pub struct Candidate {
     pub dt: usize,
     pub freq: usize,
-    pub strength: f32,
+    pub power: f32,
+    pub band_power: f32,
     pub reliability: f32,
 
     // supply default impl
     pub data: [F8; protocol::PAYLOAD_BITS],
+}
+
+impl Candidate {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.power == 0.0
+    }
+
+    #[inline]
+    pub fn snr_db(&self) -> f32 {
+        (self.power / self.band_power).log10() * 10.0 - 31.5 // magic number :)
+    }
+
+    fn update_power(&mut self, spec: &[F8]) {
+        debug_assert!(spec.len() == Decoder::FREQ_WIDTH);
+
+        self.power += spec
+            .iter()
+            .step_by(Decoder::FREQ_SCALE)
+            .max_by_key(|x| x.as_f32().to_bits())
+            .unwrap()
+            .as_f32()
+            .powf(2.);
+        self.band_power += spec
+            .iter()
+            .min_by_key(|x| x.as_f32().to_bits())
+            .unwrap()
+            .as_f32()
+            .powf(2.);
+    }
 }
 
 impl Default for Candidate {
@@ -21,7 +52,8 @@ impl Default for Candidate {
         Self {
             dt: 0,
             freq: 0,
-            strength: 0.0,
+            power: 0.0,
+            band_power: 0.0,
             reliability: 0.0,
             data: [F8::ZERO; protocol::PAYLOAD_BITS],
         }
@@ -94,20 +126,23 @@ impl Decoder {
                         *candidate = Candidate {
                             dt: self.time_step + 1 - Self::BUFFER_SIZE,
                             freq: i,
-                            strength: power,
+                            power: 0.0,
+                            band_power: 0.0,
                             reliability,
                             data: [F8::ZERO; protocol::PAYLOAD_BITS],
                         };
                         // decode data
                         for j in 0..protocol::PAYLOAD_HALF_LEN {
+                            let targ = &self.spectrum_buffer[(self.time_step
+                                + 1
+                                + (protocol::COSTAS_SIZE + j) * Self::TIME_SCALE)
+                                % Self::BUFFER_SIZE][i..i + Self::FREQ_WIDTH];
                             Self::get_likelihood(
-                                &self.spectrum_buffer[(self.time_step
-                                    + 1
-                                    + (protocol::COSTAS_SIZE + j) * Self::TIME_SCALE)
-                                    % Self::BUFFER_SIZE][i..i + Self::FREQ_WIDTH],
+                                targ,
                                 &mut candidate.data
                                     [j * protocol::FSK_DEPTH..(j + 1) * protocol::FSK_DEPTH],
                             );
+                            candidate.update_power(targ);
                         }
                     }
                 }
@@ -115,7 +150,7 @@ impl Decoder {
         }
 
         for c in self.candidates.iter_mut() {
-            if c.strength == 0.0 {
+            if c.is_empty() {
                 // ignore empty candidates
                 continue;
             }
@@ -125,10 +160,12 @@ impl Decoder {
                     // ignore final marker and beyond
                     continue;
                 }
+                let targ = &data[c.freq..c.freq + Self::FREQ_WIDTH];
                 Self::get_likelihood(
-                    &data[c.freq..c.freq + Self::FREQ_WIDTH],
+                    targ,
                     &mut c.data[idx * protocol::FSK_DEPTH..(idx + 1) * protocol::FSK_DEPTH],
                 );
+                c.update_power(targ);
             }
         }
 
