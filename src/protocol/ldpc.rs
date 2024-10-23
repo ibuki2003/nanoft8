@@ -107,6 +107,27 @@ pub fn solve(message: &[F8], out: &mut Bitset) -> u8 {
     last_err
 }
 
+pub fn encode(msg: &Bitset, out: &mut [bool]) {
+    assert_eq!(out.len(), V_SIZE);
+    out.fill(false);
+
+    for i in 0..MSG_BITS {
+        if !msg.get(i) { continue; }
+        // here msg[i] is set
+
+        // body part
+        out[i] = true;
+
+        // FEC part
+        for j in 0..C_SIZE {
+            let bit = TABLE_GEN[i][j / 32] >> (31 - j % 32) & 1 != 0;
+            if bit {
+                out[j + MSG_BITS] ^= true;
+            }
+        }
+    }
+}
+
 const EOL: u8 = 0xff; // marker for the end of the table row
 
 const TABLE_CV_LEN: usize = 7;
@@ -485,28 +506,20 @@ mod tests {
     }
 
     #[test]
-    fn test_table_rev() {
-        for (i, &row) in TABLE_GEN.iter().enumerate() {
-            for &hrow in TABLE_CV.iter() {
-                let mut bit = false;
-                for &x in hrow.iter() {
-                    if x == EOL { continue; }
-                    if x < MSG_BITS as u8 {
-                        if x == i as u8 {
-                            bit = !bit;
-                        }
-                    } else {
-                        let xx = x - MSG_BITS as u8;
-                        let xi = (xx / 32) as usize;
-                        let xj = 31 - xx % 32;
-                        let b = row[xi] & (1 << xj) != 0;
-                        if b {
-                            bit = !bit;
-                        }
-                    }
-                }
-                assert!(!bit);
-            }
+    fn test_gen() {
+        // because of linearity, testing each row is enough
+        let mut arr: FullMessageBits = [false; V_SIZE];
+        for i in 0..MSG_BITS {
+            let mut msg = Bitset::default();
+            msg.set(i, true);
+            encode(&msg, &mut arr);
+            assert_eq!(check(&arr), 0);
         }
+
+        // all 1s
+        let mut msg = Bitset::default();
+        for i in 0..MSG_BITS { msg.set(i, true); }
+        encode(&msg, &mut arr);
+        assert_eq!(check(&arr), 0);
     }
 }
