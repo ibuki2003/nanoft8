@@ -151,13 +151,13 @@ fn print_candidates(c: &[Candidate]) {
             continue;
         }
 
-        let str = match Message::decode(&bs) {
-            Ok(msg) => {
+        let str = Message::decode(&bs)
+            .map(|msg| {
                 msg.to_string(&mut buf);
-                String::from_utf8_lossy(&buf).trim().to_string()
-            }
-            Err(_) => "(invalid)".to_string(),
-        };
+                String::from_utf8_lossy(buf.trim_ascii())
+            })
+            .unwrap_or("(invalid)".into());
+
         println!(
             "{}{:>5} {:>8.1} {:>8.2} {:>8.2}  {:>3} {}{}",
             if res { "" } else { COLOR_GRAY },

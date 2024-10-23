@@ -53,22 +53,22 @@ macro_rules! writes_str {
 }
 
 impl Message {
-    pub fn decode(bs: &Bitset) -> Result<Self, ()> {
+    pub fn decode(bs: &Bitset) -> Option<Self> {
         let i3 = bs.slice(74, 3);
         match i3 {
             0 => {
                 let n3 = bs.slice(71, 3);
                 match n3 {
-                    0 => Ok(Self::FreeText(F71(bs.clone()))),
-                    1 => Ok(Self::DXpedition),
-                    2 => Ok(Self::FieldDay0),
-                    3 => Ok(Self::FieldDay1),
-                    4 => Ok(Self::Telemetry(T71(bs.clone()))),
+                    0 => Some(Self::FreeText(F71(bs.clone()))),
+                    1 => Some(Self::DXpedition),
+                    2 => Some(Self::FieldDay0),
+                    3 => Some(Self::FieldDay1),
+                    4 => Some(Self::Telemetry(T71(bs.clone()))),
                     // _ => panic!("invalid n3 value: {}", n3),
-                    _ => Err(()),
+                    _ => None,
                 }
             }
-            1 => Ok(Self::StdMsg {
+            1 => Some(Self::StdMsg {
                 call1: C28(bs.slice(0, 28)),
                 call1_r: bs.get(28),
                 call2: C28(bs.slice(29, 28)),
@@ -77,7 +77,7 @@ impl Message {
                 grid: G15(bs.slice(59, 15) as u16),
             }),
 
-            2 => Ok(Self::EuVhf {
+            2 => Some(Self::EuVhf {
                 call1: C28(bs.slice(0, 28)),
                 call1_p: bs.get(28),
                 call2: C28(bs.slice(29, 28)),
@@ -85,17 +85,17 @@ impl Message {
                 r: bs.get(58),
                 grid: G15(bs.slice(59, 15) as u16),
             }),
-            3 => Ok(Self::RttyRu),
-            4 => Ok(Self::NonStdCall {
+            3 => Some(Self::RttyRu),
+            4 => Some(Self::NonStdCall {
                 hash: H12(bs.slice(0, 12) as u16),
                 call: C58(bs.slice_u64(12, 58)),
                 hash_is_second: bs.get(70),
                 r: R2(bs.slice(71, 2) as u8),
                 cq: bs.get(73),
             }),
-            5 => Ok(Self::EuVhfHash),
+            5 => Some(Self::EuVhfHash),
             // _ => panic!("invalid i3 value: {}", i3),
-            _ => Err(()),
+            _ => None,
         }
     }
 
@@ -164,7 +164,6 @@ impl Message {
                     1 => {};
                     4 => grid.to_string(_);
                 };
-
             }
             Self::RttyRu => {
                 // K1ABC W9XYZ 579 WI
@@ -177,7 +176,6 @@ impl Message {
                 writes_str! { out;
                     10 => _.copy_from_slice(b"NonStdCall");
                 };
-
             }
             Self::EuVhfHash => {
                 // <G4ABC> <PA9XYZ> R 570007 JO22DB
@@ -214,4 +212,3 @@ pub struct T71(Bitset); // telemetry data
 // pub struct S11; // sreial number
 // pub struct S13; // serial number
 // pub struct S7; // section name
-
