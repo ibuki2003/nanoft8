@@ -17,6 +17,8 @@ impl G15 {
     pub fn to_string(&self, out: &mut [u8]) {
         debug_assert!(out.len() == 4);
 
+        out.fill(b' ');
+
         match self.0 {
             0..Self::GRID_MAX => {
                 let mut val = self.0;
@@ -45,13 +47,13 @@ impl G15 {
     pub fn from_grid_string(str: &[u8]) -> Self {
         debug_assert!(str.len() == 4);
         let mut val = 0;
-        val += (str[3] - b'0') as u16;
+        val += (str[0] - b'A') as u16;
+        val *= Self::ALPHA_CNT;
+        val += (str[1] - b'A') as u16;
         val *= 10;
         val += (str[2] - b'0') as u16;
         val *= 10;
-        val += (str[1] - b'A') as u16;
-        val *= Self::ALPHA_CNT;
-        val += (str[0] - b'A') as u16;
+        val += (str[3] - b'0') as u16;
         Self(val)
     }
 
@@ -59,5 +61,30 @@ impl G15 {
         debug_assert!((-30..=99).contains(&report));
         let val = (report + 35).unsigned_abs();
         Self(Self::GRID_MAX + val)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn grid15() {
+        let mut buf = [0; 4];
+
+        let testcases = &[
+            (b"JO22", G15::from_grid_string(b"JO22")),
+            (b"-30 ", G15::from_report(-30)),
+            (b"+00 ", G15::from_report(0)),
+            (b"+99 ", G15::from_report(99)),
+            (b"RRR ", G15::RRR),
+            (b"RR73", G15::RR73),
+            (b"73  ", G15::V73),
+        ];
+
+        for (str, g) in testcases {
+            g.to_string(&mut buf);
+            assert_eq!(String::from_utf8_lossy(&buf), String::from_utf8_lossy(*str));
+        }
+
     }
 }

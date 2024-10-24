@@ -65,7 +65,7 @@ fn idx_alnum_spc(c: u8) -> Option<u8> {
     if c == b' ' {
         Some(0)
     } else {
-        idx_alnum(c)
+        idx_alnum(c).map(|x| x + 1)
     }
 }
 
