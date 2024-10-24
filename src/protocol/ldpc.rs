@@ -9,7 +9,7 @@ const MAX_ITER: usize = 100;
 const MAX_ITER_NO_PROGRESS: usize = 10;
 
 type FullMessageBits = [bool; V_SIZE];
-fn check(message: &FullMessageBits) -> u8 {
+pub fn check(message: &FullMessageBits) -> u8 {
     let mut count = 0;
     for row in TABLE_CV.iter() {
         let sum = row.iter().fold(false, |acc, j| {

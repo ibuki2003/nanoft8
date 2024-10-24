@@ -19,3 +19,6 @@ chrono = "0.4.38"
 
 [[example]]
 name = "decode_mic"
+
+[[example]]
+name = "encode"
