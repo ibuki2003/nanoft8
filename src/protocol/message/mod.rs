@@ -230,8 +230,8 @@ impl Message {
     }
 }
 
-mod callsign28;
-pub use callsign28::C28;
+mod callsign;
+pub use callsign::{C28, C58};
 
 mod grid15;
 pub use grid15::G15;
@@ -240,7 +240,6 @@ mod roger2;
 pub use roger2::R2;
 
 // TODO: implement these mocks
-pub struct C58(u64); // NonStdCall
 pub struct F71(Bitset); // free text
 pub struct H12(u16); // hash
 pub struct T71(Bitset); // telemetry data

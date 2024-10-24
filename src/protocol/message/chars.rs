@@ -4,6 +4,7 @@ const CHARS_ALNUM_SPC: &[u8] = b" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CHARS_ALNUM: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CHARS_NUMERIC: &[u8] = b"0123456789";
 const CHARS_ALPHA_SPC: &[u8] = b" ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const CHARS_ALNUM_SS: &[u8] = b" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ/";
 
 #[derive(Clone, Copy)]
 pub enum Chars {
@@ -11,6 +12,7 @@ pub enum Chars {
     Alnum,
     Numeric,
     AlphaSpc,
+    AlnumSs,
 }
 
 impl Chars {
@@ -26,6 +28,7 @@ impl Chars {
             Self::Alnum => idx_alnum(c),
             Self::Numeric => idx_numeric(c),
             Self::AlphaSpc => idx_alpha_spc(c),
+            Self::AlnumSs => idx_alnum_ss(c),
         }
     }
 
@@ -41,6 +44,7 @@ impl Chars {
             Self::Alnum => CHARS_ALNUM,
             Self::Numeric => CHARS_NUMERIC,
             Self::AlphaSpc => CHARS_ALPHA_SPC,
+            Self::AlnumSs => CHARS_ALNUM_SS,
         }
     }
 }
@@ -82,5 +86,13 @@ fn idx_alpha_spc(c: u8) -> Option<u8> {
         b'A'..=b'Z' => Some(c - b'A' + 1),
         b'a'..=b'z' => Some(c - b'a' + 1), // case insensitive
         _ => None,
+    }
+}
+
+fn idx_alnum_ss(c: u8) -> Option<u8> {
+    if c == b'/' {
+        Some(CHARS_ALNUM_SS.len() as u8 - 1)
+    } else {
+        idx_alnum_spc(c)
     }
 }

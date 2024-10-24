@@ -1,6 +1,6 @@
 use core::ops::RangeInclusive;
 
-use super::chars::Chars;
+use crate::protocol::message::chars::Chars;
 
 pub struct C28(pub u32);
 
@@ -54,10 +54,12 @@ impl C28 {
         false
     }
 
-    pub fn from_call(call: &[u8]) -> Self {
+    pub fn from_call(call: &[u8]) -> Option<Self> {
         let mut idx = [0u8; 6];
         let r = Self::normalize_callsign(call, &mut idx);
-        debug_assert!(r);
+        if !r {
+            return None;
+        }
 
         let mut val = idx[0] as u32;
         val = val * 36 + idx[1] as u32;
@@ -65,20 +67,20 @@ impl C28 {
         val = val * 27 + idx[3] as u32;
         val = val * 27 + idx[4] as u32;
         val = val * 27 + idx[5] as u32;
-        Self(val + Self::VALUE_CALLSIGN_RANGE.start())
+        Some(Self(val + Self::VALUE_CALLSIGN_RANGE.start()))
     }
 
     pub fn to_string<'a>(&self, out: &'a mut [u8]) -> &'a [u8] {
-        assert!(out.len() == 7);
+        assert!(out.len() == 6);
 
         if self.0 == Self::VALUE_DE {
-            out.copy_from_slice(b"DE     ");
+            out.copy_from_slice(b"DE    ");
         } else if self.0 == Self::VALUE_QRZ {
-            out.copy_from_slice(b"QRZ    ");
+            out.copy_from_slice(b"QRZ   ");
         } else if self.0 == Self::VALUE_CQ {
-            out.copy_from_slice(b"CQ     ");
+            out.copy_from_slice(b"CQ    ");
         } else if Self::VALUE_CQNUM_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"CQ ___ ");
+            out.copy_from_slice(b"CQ ___");
             let mut num = self.0 - Self::VALUE_CQNUM_RANGE.start();
             out[3] = b'0' + (num % 10) as u8;
             num /= 10;
@@ -86,14 +88,13 @@ impl C28 {
             num /= 10;
             out[5] = b'0' + num as u8;
         } else if Self::VALUE_CQZONE_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"CQ ____");
-            num_to_alphas(self.0 - Self::VALUE_CQZONE_RANGE.start(), &mut out[3..7]);
+            out.copy_from_slice(b"CQ____");
+            num_to_alphas(self.0 - Self::VALUE_CQZONE_RANGE.start(), &mut out[2..6]);
         } else if Self::VALUE_HASH_RANGE.contains(&self.0) {
             out.copy_from_slice(b"<.....>");
             // TODO:
         } else if Self::VALUE_CALLSIGN_RANGE.contains(&self.0) {
-            Self::num_to_call(self.0 - Self::VALUE_CALLSIGN_RANGE.start(), &mut out[..6]);
-            out[6] = b' ';
+            Self::num_to_call(self.0 - Self::VALUE_CALLSIGN_RANGE.start(), out);
         } else {
             // panic!("invalid C28 value: {}", self.0);
             out.copy_from_slice(b"ERROR  ");
@@ -167,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_c28() {
-        let mut out = [0u8; 7];
+        let mut out = [0u8; 6];
         const TESTCASES: &[(&[u8], u32)] = &[
             (b"JA1ZLO", 149982772),
             (b"JJ1FYD", 151740002),
@@ -177,6 +178,8 @@ mod tests {
 
         for (call, num) in TESTCASES {
             let c = C28::from_call(call);
+            assert!(c.is_some());
+            let c = c.unwrap();
             assert_eq!(c.0, *num);
 
             let c = C28(*num);
@@ -194,18 +197,18 @@ mod tests {
 
     #[test]
     fn test_c28_to_string() {
-        let mut out = [0u8; 7];
+        let mut out = [0u8; 6];
 
         const TESTCASES: &[(u32, &[u8])] = &[
-            (C28::VALUE_DE, b"DE     "),
-            (C28::VALUE_QRZ, b"QRZ    "),
-            (C28::VALUE_CQ, b"CQ     "),
-            (*C28::VALUE_CQNUM_RANGE.start(), b"CQ 000 "),
-            (1004, b"CQ    A"),
-            (1031, b"CQ   AA"),
-            (1760, b"CQ  AAA"),
-            (21443, b"CQ AAAA"),
-            (532443, b"CQ ZZZZ"),
+            (C28::VALUE_DE, b"DE    "),
+            (C28::VALUE_QRZ, b"QRZ   "),
+            (C28::VALUE_CQ, b"CQ    "),
+            (*C28::VALUE_CQNUM_RANGE.start(), b"CQ 000"),
+            (1004, b"CQ   A"),
+            (1031, b"CQ  AA"),
+            (1760, b"CQ AAA"),
+            (21443, b"CQAAAA"),
+            (532443, b"CQZZZZ"),
             // (*C28::VALUE_HASH_RANGE.start(), b"<.....>"),
         ];
         for (num, ret) in TESTCASES {
