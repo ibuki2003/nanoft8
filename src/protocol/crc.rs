@@ -23,3 +23,8 @@ pub fn calc_crc(data: &Bitset) -> u16 {
 
     (crc & ((1 << CRC_BITS) - 1)) as u16
 }
+
+pub fn add_crc(data: &mut Bitset) {
+    let crc = calc_crc(data);
+    data.set_slice(BODY_BITS, CRC_BITS, crc as u32);
+}
