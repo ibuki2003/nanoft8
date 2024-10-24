@@ -85,6 +85,5 @@ mod tests {
             g.to_string(&mut buf);
             assert_eq!(String::from_utf8_lossy(&buf), String::from_utf8_lossy(*str));
         }
-
     }
 }

@@ -112,7 +112,9 @@ pub fn encode(msg: &Bitset, out: &mut [bool]) {
     out.fill(false);
 
     for i in 0..MSG_BITS {
-        if !msg.get(i) { continue; }
+        if !msg.get(i) {
+            continue;
+        }
         // here msg[i] is set
 
         // body part
@@ -519,7 +521,9 @@ mod tests {
 
         // all 1s
         let mut msg = Bitset::default();
-        for i in 0..MSG_BITS { msg.set(i, true); }
+        for i in 0..MSG_BITS {
+            msg.set(i, true);
+        }
         encode(&msg, &mut arr);
         assert_eq!(check(&arr), 0);
     }

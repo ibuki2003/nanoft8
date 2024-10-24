@@ -190,9 +190,22 @@ impl Message {
         let mut ret = Bitset::default();
 
         match self {
-            // Message::FreeText(f71) => todo!(),
-            // Message::Telemetry(t71) => todo!(),
-            Message::StdMsg { call1, call1_r, call2, call2_r, r, grid } => {
+            Message::FreeText(f71) => {
+                ret = f71.0.clone();
+                ret.set_slice(71, 3, 0); // FreeText
+            }
+            Message::Telemetry(t71) => {
+                ret = t71.0.clone();
+                ret.set_slice(71, 3, 4); // Telemetry
+            }
+            Message::StdMsg {
+                call1,
+                call1_r,
+                call2,
+                call2_r,
+                r,
+                grid,
+            } => {
                 ret.set_slice(0, 28, call1.0);
                 ret.set(28, *call1_r);
                 ret.set_slice(29, 28, call2.0);
@@ -200,9 +213,15 @@ impl Message {
                 ret.set(58, *r);
                 ret.set_slice(59, 15, grid.0 as u32);
                 ret.set_slice(74, 3, 1); // StdMsg
-
-            },
-            Message::EuVhf { call1, call1_p, call2, call2_p, r, grid } => {
+            }
+            Message::EuVhf {
+                call1,
+                call1_p,
+                call2,
+                call2_p,
+                r,
+                grid,
+            } => {
                 ret.set_slice(0, 28, call1.0);
                 ret.set(28, *call1_p);
                 ret.set_slice(29, 28, call2.0);
@@ -211,8 +230,14 @@ impl Message {
                 ret.set_slice(59, 15, grid.0 as u32);
 
                 ret.set_slice(74, 3, 2); // EuVhf
-            },
-            Message::NonStdCall { hash, call, hash_is_second, r, cq } => {
+            }
+            Message::NonStdCall {
+                hash,
+                call,
+                hash_is_second,
+                r,
+                cq,
+            } => {
                 ret.set_slice(0, 12, hash.0 as u32);
                 // ret.set_slice(12, 58, call.0);
                 ret.set_slice(12, 20, (call.0 >> 38) as u32);
@@ -223,8 +248,8 @@ impl Message {
                 ret.set(73, *cq);
 
                 ret.set_slice(74, 3, 4); // NonStdCall
-            },
-            _ => {}, // not implemented but no error
+            }
+            _ => {} // not implemented but no error
         }
         ret
     }
