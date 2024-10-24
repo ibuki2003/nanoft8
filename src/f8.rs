@@ -1,7 +1,7 @@
 // 1byte floating point number
 // used for save LLR values
 
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, PartialEq, PartialOrd)]
 pub struct F8(pub f32); // temporarily use f32
 
 impl F8 {
@@ -22,8 +22,15 @@ impl From<f32> for F8 {
     }
 }
 
-impl Into<f32> for F8 {
-    fn into(self) -> f32 {
-        self.0
+impl From<F8> for f32 {
+    fn from(val: F8) -> Self {
+        val.0
+    }
+}
+
+#[cfg(not(feature = "no_std"))]
+impl core::fmt::Debug for F8 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{:.3}", self.0)
     }
 }
