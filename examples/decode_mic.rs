@@ -18,11 +18,14 @@ fn main() {
         let rec = pulse_simple::Record::new("nanoft8", "hoge", None, 48000);
         let mut buf = [[0f32; 1]; 1024];
         loop {
+            let mut last_sec = 0;
             let mut idx = 0;
             let mut iter = std::iter::from_fn(|| {
-                if sec() % 15 == 0 {
+                if last_sec != 0 && sec() % 15 == 0 {
                     return None;
                 }
+                last_sec = sec() % 15;
+
                 if idx == 0 {
                     rec.read(&mut buf);
                 }
