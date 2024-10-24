@@ -90,7 +90,7 @@ impl Message {
                 hash: H12(bs.slice(0, 12) as u16),
                 call: C58(bs.slice_u64(12, 58)),
                 hash_is_second: bs.get(70),
-                r: R2(bs.slice(71, 2) as u8),
+                r: R2::from_val(bs.slice(71, 2) as u8),
                 cq: bs.get(73),
             }),
             5 => Some(Self::EuVhfHash),
@@ -219,7 +219,7 @@ impl Message {
                 ret.set_slice(32, 32, (call.0 >> 6) as u32);
                 ret.set_slice(64, 6, (call.0 & 0x3F) as u32);
                 ret.set(70, *hash_is_second);
-                ret.set_slice(71, 2, r.0 as u32);
+                ret.set_slice(71, 2, r.to_val() as u32);
                 ret.set(73, *cq);
 
                 ret.set_slice(74, 3, 4); // NonStdCall
@@ -236,11 +236,13 @@ pub use callsign28::C28;
 mod grid15;
 pub use grid15::G15;
 
+mod roger2;
+pub use roger2::R2;
+
 // TODO: implement these mocks
 pub struct C58(u64); // NonStdCall
 pub struct F71(Bitset); // free text
 pub struct H12(u16); // hash
-pub struct R2(u8); // RRR message
 pub struct T71(Bitset); // telemetry data
 
 // TODO: implement remaining types; now only frequently used types are implemented
