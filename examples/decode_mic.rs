@@ -171,6 +171,11 @@ fn print_candidates(c: &[Candidate]) {
 
         let res = check_crc(&bs);
 
+        if bs.0.iter().all(|&x| x == 0) {
+            // empty message
+            continue;
+        }
+
         if !res && cnt >= 10 {
             continue;
         }
