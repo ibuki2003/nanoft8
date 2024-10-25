@@ -13,9 +13,9 @@ no_std = []
 [dev-dependencies]
 rustfft = "6.2.0"
 num-complex = "0.4.6"
-pulse-simple = "1.0.1"
 hound = "3.5.1"
 chrono = "0.4.38"
+cpal = "0.15.3"
 
 [[example]]
 name = "decode_mic"

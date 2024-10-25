@@ -1,4 +1,5 @@
 use chrono::Timelike as _;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait as _};
 use nanoft8::decoder::{Candidate, Decoder, Spectrum};
 use nanoft8::protocol::crc::check_crc;
 use nanoft8::protocol::message::Message;
@@ -15,25 +16,45 @@ fn main() {
 
     if args.len() < 2 {
         // from mic
-        let rec = pulse_simple::Record::new("nanoft8", "hoge", None, 48000);
-        let mut buf = [[0f32; 1]; 1024];
+        let host = cpal::default_host();
+        let device = host.default_input_device().unwrap();
+        println!("Using input device: '{}'", device.name().unwrap());
+        let config = cpal::StreamConfig {
+            channels: 1,
+            sample_rate: cpal::SampleRate(8000),
+            buffer_size: cpal::BufferSize::Default,
+        };
+
+        let err_fn = move |err| {
+            eprintln!("an error occurred on stream: {}", err);
+        };
+
+        let (tx, rx) = std::sync::mpsc::sync_channel(8192);
+
+        let stream = device.build_input_stream(
+            &config,
+            move |data: &[i16], _: &_| {
+                data.iter().for_each(|x| {
+                    tx.try_send(*x as f32 / 32768.0).ok();
+                });
+            },
+            err_fn,
+            None,
+        ).unwrap();
+
+        stream.play().unwrap();
+
         loop {
             let mut last_sec = 0;
-            let mut idx = 0;
             let mut iter = std::iter::from_fn(|| {
                 if last_sec != 0 && sec() % 15 == 0 {
                     return None;
                 }
                 last_sec = sec() % 15;
 
-                if idx == 0 {
-                    rec.read(&mut buf);
-                }
-                let ret = Some(buf[idx][0]);
-                idx = (idx + 1) % 1024;
-                ret
+                rx.recv().ok()
             });
-            process(&mut iter, 48000);
+            process(&mut iter, 8000);
         }
     } else {
         // from file
