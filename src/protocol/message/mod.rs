@@ -132,10 +132,10 @@ impl Message {
                 // // K1ABC/R W9XYZ/R R EN37
                 writes_str! { out;
                     7 => _.copy_from_slice(b"StdMsg ");
-                    7 => call1.to_string(_);
+                    6 => call1.to_string(_);
                     2 => if *call1_r { _.copy_from_slice(b"/R") };
                     1 => {};
-                    7 => call2.to_string(_);
+                    6 => call2.to_string(_);
                     2 => if *call2_r { _.copy_from_slice(b"/R") };
                     1 => {};
                     1 => if *r { _.copy_from_slice(b"R") };
@@ -154,10 +154,10 @@ impl Message {
                 // G4ABC/P PA9XYZ JO22
                 writes_str! { out;
                     7 => _.copy_from_slice(b"EuVhf  ");
-                    7 => call1.to_string(_);
+                    6 => call1.to_string(_);
                     2 => if *call1_p { _.copy_from_slice(b"/P") };
                     1 => {};
-                    7 => call2.to_string(_);
+                    6 => call2.to_string(_);
                     2 => if *call2_p { _.copy_from_slice(b"/P") };
                     1 => {};
                     1 => if *r { _.copy_from_slice(b"R") };
