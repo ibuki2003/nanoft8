@@ -5,6 +5,7 @@ const CHARS_ALNUM: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CHARS_NUMERIC: &[u8] = b"0123456789";
 const CHARS_ALPHA_SPC: &[u8] = b" ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CHARS_ALNUM_SS: &[u8] = b" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ/";
+const CHARS_FULL: &[u8] = b" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?";
 
 #[derive(Clone, Copy)]
 pub enum Chars {
@@ -13,6 +14,7 @@ pub enum Chars {
     Numeric,
     AlphaSpc,
     AlnumSs,
+    Full,
 }
 
 impl Chars {
@@ -29,6 +31,7 @@ impl Chars {
             Self::Numeric => idx_numeric(c),
             Self::AlphaSpc => idx_alpha_spc(c),
             Self::AlnumSs => idx_alnum_ss(c),
+            Self::Full => idx_full(c),
         }
     }
 
@@ -45,6 +48,7 @@ impl Chars {
             Self::Numeric => CHARS_NUMERIC,
             Self::AlphaSpc => CHARS_ALPHA_SPC,
             Self::AlnumSs => CHARS_ALNUM_SS,
+            Self::Full => CHARS_FULL,
         }
     }
 }
@@ -94,5 +98,16 @@ fn idx_alnum_ss(c: u8) -> Option<u8> {
         Some(CHARS_ALNUM_SS.len() as u8 - 1)
     } else {
         idx_alnum_spc(c)
+    }
+}
+
+fn idx_full(c: u8) -> Option<u8> {
+    match c {
+        b'+' => Some(CHARS_ALNUM_SPC.len() as u8),
+        b'-' => Some(CHARS_ALNUM_SPC.len() as u8 + 1),
+        b'.' => Some(CHARS_ALNUM_SPC.len() as u8 + 2),
+        b'/' => Some(CHARS_ALNUM_SPC.len() as u8 + 3),
+        b'?' => Some(CHARS_ALNUM_SPC.len() as u8 + 4),
+        _ => idx_alnum_spc(c),
     }
 }

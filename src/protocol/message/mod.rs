@@ -103,8 +103,8 @@ impl Message {
         out.fill(b' ');
 
         match self {
-            Self::FreeText(_) => {
-                out[..8].copy_from_slice(b"FreeText");
+            Self::FreeText(f71) => {
+                f71.to_string(out);
             }
             Self::DXpedition => {
                 // K1ABC RR73; W9XYZ <KH1/KH7Z> -08
@@ -264,8 +264,10 @@ pub use grid15::G15;
 mod roger2;
 pub use roger2::R2;
 
+mod freetext;
+pub use freetext::F71;
+
 // TODO: implement these mocks
-pub struct F71(Bitset); // free text
 pub struct H12(u16); // hash
 pub struct T71(Bitset); // telemetry data
 
