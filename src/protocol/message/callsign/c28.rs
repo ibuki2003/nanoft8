@@ -91,13 +91,13 @@ impl C28 {
             out.copy_from_slice(b"CQ____");
             num_to_alphas(self.0 - Self::VALUE_CQZONE_RANGE.start(), &mut out[2..6]);
         } else if Self::VALUE_HASH_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"<.....>");
+            out.copy_from_slice(b"<....>");
             // TODO:
         } else if Self::VALUE_CALLSIGN_RANGE.contains(&self.0) {
             Self::num_to_call(self.0 - Self::VALUE_CALLSIGN_RANGE.start(), out);
         } else {
             // panic!("invalid C28 value: {}", self.0);
-            out.copy_from_slice(b"ERROR  ");
+            out.copy_from_slice(b"ERROR ");
         }
 
         out

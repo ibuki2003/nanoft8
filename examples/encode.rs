@@ -9,9 +9,9 @@ use nanoft8::{
 
 fn main() {
     let msg = Message::StdMsg {
-        call1: C28::from_call(b"JA1ZLO"),
+        call1: C28::from_call(b"JA1ZLO").unwrap(),
         call1_r: false,
-        call2: C28::from_call(b"JA1YWX"),
+        call2: C28::from_call(b"JA1YWX").unwrap(),
         call2_r: false,
         r: true,
         grid: G15::from_grid_string(b"PM95"),
