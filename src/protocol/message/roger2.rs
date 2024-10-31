@@ -32,7 +32,7 @@ impl R2 {
             Self::BLANK => out.copy_from_slice(b"    "),
             Self::RRR => out.copy_from_slice(b"RRR "),
             Self::RR73 => out.copy_from_slice(b"RR73"),
-            Self::V73 => out.copy_from_slice(b"V73  "),
+            Self::V73 => out.copy_from_slice(b"73  "),
         }
     }
 }
