@@ -3,3 +3,5 @@ pub use c28::C28;
 
 mod c58;
 pub use c58::C58;
+
+pub mod hash;
