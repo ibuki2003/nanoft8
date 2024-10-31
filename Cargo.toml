@@ -22,3 +22,6 @@ name = "decode_mic"
 
 [[example]]
 name = "encode"
+
+[[example]]
+name = "decode_bin"
