@@ -31,16 +31,18 @@ fn main() {
 
         let (tx, rx) = std::sync::mpsc::sync_channel(8192);
 
-        let stream = device.build_input_stream(
-            &config,
-            move |data: &[i16], _: &_| {
-                data.iter().for_each(|x| {
-                    tx.try_send(*x as f32 / 32768.0).ok();
-                });
-            },
-            err_fn,
-            None,
-        ).unwrap();
+        let stream = device
+            .build_input_stream(
+                &config,
+                move |data: &[i16], _: &_| {
+                    data.iter().for_each(|x| {
+                        tx.try_send(*x as f32 / 32768.0).ok();
+                    });
+                },
+                err_fn,
+                None,
+            )
+            .unwrap();
 
         stream.play().unwrap();
 
