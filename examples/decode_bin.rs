@@ -24,7 +24,13 @@ fn main() {
         for (i, c) in line[..BODY_BITS].chars().enumerate() {
             bs.set(i, c == '1');
         }
-        let msg = Message::decode(&bs).unwrap();
+        let msg = if let Some(v) = Message::decode(&bs) {
+            v
+        } else {
+            eprintln!("failed to decode");
+            continue;
+        };
+
         let mut str = [0; 64];
         msg.to_string(&mut str);
         let str = String::from_utf8_lossy(&str);
