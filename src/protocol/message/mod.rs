@@ -131,7 +131,6 @@ impl Message {
             } => {
                 // // K1ABC/R W9XYZ/R R EN37
                 writes_str! { out;
-                    7 => _.copy_from_slice(b"StdMsg ");
                     6 => call1.to_string(_);
                     2 => if *call1_r { _.copy_from_slice(b"/R") };
                     1 => {};
@@ -153,7 +152,6 @@ impl Message {
             } => {
                 // G4ABC/P PA9XYZ JO22
                 writes_str! { out;
-                    7 => _.copy_from_slice(b"EuVhf  ");
                     6 => call1.to_string(_);
                     2 => if *call1_p { _.copy_from_slice(b"/P") };
                     1 => {};
@@ -167,15 +165,39 @@ impl Message {
             }
             Self::RttyRu => {
                 // K1ABC W9XYZ 579 WI
-                writes_str! { out;
-                    6 => _.copy_from_slice(b"RttyRu");
-                };
+                out[..6].copy_from_slice(b"RttyRu");
             }
-            Self::NonStdCall { .. } => {
+            Self::NonStdCall {
+                cq,
+                call,
+                // hash,
+                hash_is_second,
+                r,
+                ..
+            } => {
                 // <W9XYZ> PJ4/K1ABC RRR
-                writes_str! { out;
-                    10 => _.copy_from_slice(b"NonStdCall");
-                };
+                if *cq {
+                    writes_str! { out;
+                        3 => _.copy_from_slice(b"CQ ");
+                        11 => call.to_string(_);
+                    };
+                } else if *hash_is_second {
+                    writes_str! { out;
+                        11 => call.to_string(_);
+                        1 => {};
+                        6 => _.copy_from_slice(b"<....>");
+                        1 => {};
+                        4 => r.to_string(_);
+                    };
+                } else {
+                    writes_str! { out;
+                        6 => _.copy_from_slice(b"<....>");
+                        1 => {};
+                        11 => call.to_string(_);
+                        1 => {};
+                        4 => r.to_string(_);
+                    };
+                }
             }
             Self::EuVhfHash => {
                 // <G4ABC> <PA9XYZ> R 570007 JO22DB
