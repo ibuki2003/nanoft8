@@ -63,7 +63,6 @@ impl CallsignHash {
     }
 }
 
-// NOTE: returns ~0 if the callsign is invalid
 pub fn hash_callsign(str: &[u8]) -> Option<CallsignHash> {
     let str = trim_u8str(str);
 
