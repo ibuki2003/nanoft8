@@ -154,4 +154,11 @@ mod tests {
         assert!(CallsignHash::H22(0x001fff).matches(&CallsignHash::H10(0x001)));
         assert!(!CallsignHash::H22(0x002000).matches(&CallsignHash::H10(0x001)));
     }
+
+    #[test]
+    fn test_hash() {
+        assert_eq!(hash_callsign(b"JA1ZLO"), Some(CallsignHash::H22(3380585)));
+        assert_eq!(hash_callsign(b"JA1ZLO/1"), Some(CallsignHash::H22(12904)));
+        assert_eq!(hash_callsign(b"JJ1FYD"), Some(CallsignHash::H22(2882573)));
+    }
 }
