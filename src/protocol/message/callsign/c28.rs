@@ -1,6 +1,6 @@
 use core::ops::RangeInclusive;
 
-use crate::protocol::message::chars::Chars;
+use crate::{protocol::message::chars::Chars, util::trim_u8str};
 
 pub struct C28(pub u32);
 
@@ -55,6 +55,7 @@ impl C28 {
     }
 
     pub fn from_call(call: &[u8]) -> Option<Self> {
+        let call = trim_u8str(call);
         let mut idx = [0u8; 6];
         let r = Self::normalize_callsign(call, &mut idx);
         if !r {

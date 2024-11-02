@@ -1,6 +1,6 @@
 use core::ops::Shr as _;
 
-use crate::protocol::message::chars::Chars;
+use crate::{protocol::message::chars::Chars, util::trim_u8str};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum CallsignHash {
@@ -43,14 +43,8 @@ impl CallsignHash {
 }
 
 // NOTE: returns ~0 if the callsign is invalid
-pub fn hash_callsign(mut str: &[u8]) -> Option<CallsignHash> {
-    // trim whitespace
-    while str.first().is_some_and(|&x| x == b' ') {
-        str = &str[1..];
-    }
-    while str.last().is_some_and(|&x| x == b' ') {
-        str = &str[..str.len() - 1];
-    }
+pub fn hash_callsign(str: &[u8]) -> Option<CallsignHash> {
+    let str = trim_u8str(str);
 
     if str.len() > 11 {
         return None;

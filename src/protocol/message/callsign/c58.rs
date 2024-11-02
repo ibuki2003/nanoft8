@@ -1,17 +1,11 @@
-use crate::protocol::message::chars::Chars;
+use crate::{protocol::message::chars::Chars, util::trim_u8str};
 
 pub struct C58(pub u64);
 
 // standard callsigns
 impl C58 {
-    pub fn from_call(mut call: &[u8]) -> Option<Self> {
-        // trim whitespace
-        while call.first().is_some_and(|&x| x == b' ') {
-            call = &call[1..];
-        }
-        while call.last().is_some_and(|&x| x == b' ') {
-            call = &call[..call.len() - 1];
-        }
+    pub fn from_call(call: &[u8]) -> Option<Self> {
+        let call = trim_u8str(call);
 
         if call.len() > 11 {
             return None;
