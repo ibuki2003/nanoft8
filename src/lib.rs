@@ -1,4 +1,5 @@
 #![cfg_attr(feature = "no_std", no_std)]
+#![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
 pub mod decoder;

@@ -277,8 +277,8 @@ impl Message {
     }
 }
 
-mod callsign;
-pub use callsign::{C28, C58};
+pub mod callsign;
+use callsign::{C28, C58};
 
 mod grid15;
 pub use grid15::G15;

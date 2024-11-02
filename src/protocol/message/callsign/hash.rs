@@ -1,6 +1,6 @@
-use core::ops::Shr as _;
-
+use super::FullCallsign;
 use crate::{protocol::message::chars::Chars, util::trim_u8str};
+use core::ops::Shr as _;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum CallsignHash {
@@ -62,6 +62,51 @@ pub fn hash_callsign(str: &[u8]) -> Option<CallsignHash> {
     Some(CallsignHash::H22(
         n.wrapping_mul(47055833459).shr(64 - 22) as u32 & ((1 << 22) - 1),
     ))
+}
+
+pub trait CallsignHashTable {
+    // return first match
+    fn find_hash(&self, hash: CallsignHash) -> Option<&FullCallsign>;
+    fn add(&mut self, callsign: &FullCallsign) -> bool;
+}
+
+impl<const N: usize, const M: usize> CallsignHashTable
+    for super::hashtable::HashTable<FullCallsign, N, M>
+where
+    [FullCallsign; super::hashtable::table_size(N)]: Sized,
+{
+    fn find_hash(&self, hash: CallsignHash) -> Option<&FullCallsign> {
+        self.get_partial(hash.as_u32())
+            .filter(|(&key, _)| hash.matches(&CallsignHash::H22(key)))
+            .map(|(_, value)| value)
+            .next()
+    }
+
+    fn add(&mut self, callsign: &FullCallsign) -> bool {
+        let hash = hash_callsign(callsign);
+        if hash.is_none() {
+            return false;
+        }
+        let hash = hash.unwrap().as_u32();
+        self.set(hash, *callsign);
+        true
+    }
+}
+
+#[cfg(not(feature = "no_std"))]
+impl CallsignHashTable for std::collections::BTreeMap<u32, FullCallsign> {
+    fn find_hash(&self, hash: CallsignHash) -> Option<&FullCallsign> {
+        self.range(hash.range()).next().map(|(_, v)| v)
+    }
+    fn add(&mut self, callsign: &FullCallsign) -> bool {
+        let hash = hash_callsign(callsign);
+        if hash.is_none() {
+            return false;
+        }
+        let hash = hash.unwrap().as_u32();
+        self.insert(hash, *callsign);
+        true
+    }
 }
 
 #[cfg(test)]
