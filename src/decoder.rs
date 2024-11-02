@@ -176,16 +176,16 @@ impl Decoder {
         assert_eq!(data.len(), Self::FREQ_WIDTH);
         assert_eq!(out.len(), protocol::FSK_DEPTH);
 
-        let mut outf = [[0.0f32; 2]; protocol::FSK_DEPTH];
+        let mut sm = [[0.0f32; 2]; protocol::FSK_DEPTH];
         for i in 0..protocol::FSK_ARITY {
-            for (j, out) in outf.iter_mut().enumerate() {
+            for (j, row) in sm.iter_mut().enumerate() {
                 let bit = (protocol::GRAY_CODE[i] & (4 >> j) != 0) as usize;
-                out[bit] += data[i * Self::FREQ_SCALE].as_f32().powf(2.);
+                row[bit] += data[i * Self::FREQ_SCALE].as_f32().powf(2.);
             }
         }
 
         for i in 0..protocol::FSK_DEPTH {
-            let v = outf[i][1].ln() - outf[i][0].ln();
+            let v = sm[i][1].ln() - sm[i][0].ln();
             out[i] = F8::from_f32(v);
         }
     }
