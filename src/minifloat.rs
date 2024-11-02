@@ -10,11 +10,7 @@ impl<const SIGNED: bool, const EXP_SIZE: usize, const EXP_BIAS: u8>
     const FRAC_SIZE: usize = 8 - EXP_SIZE - (SIGNED as usize);
 
     pub const ZERO: Self = Self(0);
-}
 
-impl<const SIGNED: bool, const EXP_SIZE: usize, const EXP_BIAS: u8>
-    _F8<SIGNED, EXP_SIZE, EXP_BIAS>
-{
     pub fn as_f32(self) -> f32 {
         if self.0 & 0x7f == 0 {
             return if (self.0 >> 7) == 0 { 0. } else { -0. };
@@ -85,6 +81,15 @@ impl<const SIGNED: bool, const EXP_SIZE: usize, const EXP_BIAS: u8>
     pub fn from_bits(bits: u8) -> Self {
         Self(bits)
     }
+}
+
+impl<const EXP_SIZE: usize, const EXP_BIAS: u8> _F8<true, EXP_SIZE, EXP_BIAS> {
+    pub const INF: Self = Self(0x7f);
+    pub const NEG_INF: Self = Self(0xff);
+}
+
+impl<const EXP_SIZE: usize, const EXP_BIAS: u8> _F8<false, EXP_SIZE, EXP_BIAS> {
+    pub const INF: Self = Self(0xff);
 }
 
 impl<const SIGNED: bool, const EXP_SIZE: usize, const EXP_BIAS: u8> From<f32>

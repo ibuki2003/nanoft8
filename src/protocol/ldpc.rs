@@ -1,8 +1,19 @@
 use super::{BODY_BITS, CRC_BITS, PAYLOAD_BITS};
-use crate::{minifloat::F8, Bitset};
+use crate::{minifloat::FloatS, Bitset};
 
 #[cfg(feature = "no_std")]
 use micromath::F32Ext;
+
+// TODO: speed up if needed
+fn tanh(x: f32) -> f32 {
+    let a = x.exp();
+    let b = 1.0 / a;
+    (a - b) / (a + b)
+}
+
+fn atanh(x: f32) -> f32 {
+    0.5 * ((1.0 + x) / (1.0 - x)).ln()
+}
 
 const V_SIZE: usize = PAYLOAD_BITS;
 const C_SIZE: usize = 83;
@@ -33,7 +44,7 @@ pub fn check(message: &FullMessageBits) -> u8 {
 // solve the parity check equations
 // out: the message bits
 // returns the number of errors
-pub fn solve(message: &[F8], out: &mut Bitset) -> u8 {
+pub fn solve<F: FloatS>(message: &[F], out: &mut Bitset) -> u8 {
     debug_assert!(message.len() == V_SIZE);
 
     let mut message_f32 = [0.0f32; V_SIZE];
@@ -85,7 +96,7 @@ pub fn solve(message: &[F8], out: &mut Bitset) -> u8 {
                         sum += tov[n as usize][j];
                     }
                 }
-                toc[m][i] = (sum / -2.).tanh();
+                toc[m][i] = tanh(sum / -2.);
             }
         }
 
@@ -100,7 +111,7 @@ pub fn solve(message: &[F8], out: &mut Bitset) -> u8 {
                         sum *= toc[m as usize][j];
                     }
                 }
-                tov[n][i] = -2. * sum.atanh();
+                tov[n][i] = -2. * atanh(sum);
             }
         }
     }

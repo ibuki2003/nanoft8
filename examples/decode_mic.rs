@@ -1,9 +1,11 @@
 use chrono::Timelike as _;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait as _};
-use nanoft8::decoder::{Candidate, Decoder, Spectrum};
-use nanoft8::protocol::crc::check_crc;
-use nanoft8::protocol::message::Message;
-use nanoft8::{minifloat::F8, protocol, Bitset};
+use nanoft8::{
+    decoder::{Candidate, Decoder},
+    minifloat::{FloatS, Fu8, F8},
+    protocol::{self, crc::check_crc, message::Message},
+    Bitset,
+};
 use num_complex::Complex32;
 
 #[inline]
@@ -11,8 +13,15 @@ fn sec() -> u32 {
     chrono::Utc::now().second()
 }
 
+type SpecFloat = Fu8;
+type LLRFloat = F8;
+// type SpecFloat = f32;
+// type LLRFloat = f32;
+type Dec = Decoder<SpecFloat, LLRFloat>;
+
 fn main() {
     let args = std::env::args().collect::<Vec<String>>();
+    println!("Decoder size: {} Bytes", std::mem::size_of::<Dec>());
 
     if args.len() < 2 {
         // from mic
@@ -99,7 +108,7 @@ fn main() {
 }
 
 fn process(source: &mut dyn Iterator<Item = f32>, rate: u32) {
-    let mut decoder = Decoder::default();
+    let mut decoder = Dec::default();
 
     let step: usize = (rate * 40 / 1000) as usize;
     let size: usize = (rate * 160 / 1000) as usize;
@@ -111,7 +120,7 @@ fn process(source: &mut dyn Iterator<Item = f32>, rate: u32) {
     let mut planner = rustfft::FftPlanner::new();
     let fft = planner.plan_fft_forward(size * 2);
 
-    let mut spectrum: Spectrum = [F8::ZERO; 1024];
+    let mut spectrum = [SpecFloat::default(); 1024];
 
     'outer: for i in 0.. {
         for j in 0..step {
@@ -129,10 +138,20 @@ fn process(source: &mut dyn Iterator<Item = f32>, rate: u32) {
         }
         hanning_window(&mut fftbuf[..size]);
         fft.process(&mut fftbuf);
+
+        let mut over = false;
         fftbuf[..1024].iter().enumerate().for_each(|(i, x)| {
-            spectrum[i] = x.norm().into();
+            let x: Fu8 = (x / 10.).norm().into();
+            if x.0 == Fu8::INF.0 {
+                over = true;
+            }
+            spectrum[i] = x;
         });
         decoder.put_spectrum(&spectrum);
+
+        if over {
+            eprintln!("WARN: overflow occurred");
+        }
     }
     print_candidates(&decoder.candidates);
 }
@@ -147,7 +166,7 @@ fn hanning_window(data: &mut [Complex32]) {
 const COLOR_GRAY: &str = "\x1b[38;5;240m";
 const COLOR_RESET: &str = "\x1b[0m";
 
-fn print_candidates(c: &[Candidate]) {
+fn print_candidates<T: FloatS>(c: &[Candidate<T>]) {
     let mut c = Vec::from(c);
     // c.sort_by_cached_key(|x| x.strength.to_bits());
     c.sort_by_cached_key(|x| x.reliability.to_bits());
