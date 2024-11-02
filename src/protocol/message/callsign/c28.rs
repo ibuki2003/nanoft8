@@ -16,7 +16,7 @@ impl C28 {
 
     const VALUE_CQNUM_RANGE: RangeInclusive<u32> = 3..=1002;
     const VALUE_CQZONE_RANGE: RangeInclusive<u32> = 1003..=(1003 + 27 * 27 * 27 * 27);
-    const VALUE_HASH_RANGE: RangeInclusive<u32> = 2063592..=(2063592 + (1 << 20) - 1);
+    const VALUE_HASH_RANGE: RangeInclusive<u32> = 2063592..=(2063592 + (1 << 22) - 1);
     const VALUE_CALLSIGN_RANGE: RangeInclusive<u32> =
         6257896..=(6257896 + 37 * 36 * 10 * 27 * 27 * 27 - 1);
 
