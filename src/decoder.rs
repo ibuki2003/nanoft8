@@ -1,5 +1,8 @@
 use crate::{minifloat::F8, protocol};
 
+#[cfg(feature = "no_std")]
+use micromath::F32Ext;
+
 const SPECTRUM_SIZE: usize = 1024;
 
 // TODO: use 8bit integers to save space

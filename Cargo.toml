@@ -5,10 +5,11 @@ edition = "2021"
 
 [dependencies]
 macro_find_and_replace = "1.0.0"
+micromath = { version = "2.1.0", optional = true }
 
 [features]
 default = []
-no_std = []
+no_std = ["dep:micromath"]
 
 [dev-dependencies]
 rustfft = "6.2.0"
