@@ -1,11 +1,11 @@
-use crate::{protocol, F8};
+use crate::{minifloat::F8, protocol};
 
 const SPECTRUM_SIZE: usize = 1024;
 
 // TODO: use 8bit integers to save space
 pub type Spectrum = [F8; SPECTRUM_SIZE];
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct Candidate {
     pub dt: usize,
     pub freq: usize,

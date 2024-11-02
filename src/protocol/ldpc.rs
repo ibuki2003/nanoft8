@@ -1,5 +1,5 @@
 use super::{BODY_BITS, CRC_BITS, PAYLOAD_BITS};
-use crate::{Bitset, F8};
+use crate::{minifloat::F8, Bitset};
 
 const V_SIZE: usize = PAYLOAD_BITS;
 const C_SIZE: usize = 83;

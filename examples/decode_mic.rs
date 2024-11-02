@@ -3,7 +3,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait as _};
 use nanoft8::decoder::{Candidate, Decoder, Spectrum};
 use nanoft8::protocol::crc::check_crc;
 use nanoft8::protocol::message::Message;
-use nanoft8::{protocol, Bitset, F8};
+use nanoft8::{minifloat::F8, protocol, Bitset};
 use num_complex::Complex32;
 
 #[inline]
