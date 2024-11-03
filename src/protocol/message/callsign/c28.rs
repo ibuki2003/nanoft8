@@ -71,6 +71,10 @@ impl C28 {
         Some(Self(val + Self::VALUE_CALLSIGN_RANGE.start()))
     }
 
+    pub fn from_hash(hash: u32) -> Self {
+        Self(hash + Self::VALUE_HASH_RANGE.start())
+    }
+
     pub fn to_string<'a>(&self, out: &'a mut [u8]) -> &'a [u8] {
         assert!(out.len() == 6);
 
