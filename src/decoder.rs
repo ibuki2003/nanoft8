@@ -66,7 +66,7 @@ impl<LLRFloat: FloatS> Candidate<LLRFloat> {
                 .unwrap())
             .into(),
         );
-        self.band_power += fsquare((*spec.iter().max_by_key(|x| x.to_inner()).unwrap()).into());
+        self.band_power += fsquare((*spec.iter().min_by_key(|x| x.to_inner()).unwrap()).into());
     }
 }
 
