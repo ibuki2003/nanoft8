@@ -26,7 +26,7 @@ pub enum Message {
     },
     RttyRu,
     NonStdCall {
-        hash: H12,
+        hash: CallsignHash,
         call: C58,
         hash_is_second: bool,
         r: R2,
@@ -87,7 +87,7 @@ impl Message {
             }),
             3 => Some(Self::RttyRu),
             4 => Some(Self::NonStdCall {
-                hash: H12(bs.slice(0, 12) as u16),
+                hash: CallsignHash::H12(bs.slice(0, 12) as u16),
                 call: C58(bs.slice_u64(12, 58)),
                 hash_is_second: bs.get(70),
                 r: R2::from_val(bs.slice(71, 2) as u8),
@@ -260,7 +260,7 @@ impl Message {
                 r,
                 cq,
             } => {
-                ret.set_slice(0, 12, hash.0 as u32);
+                ret.set_slice(0, 12, hash.as_h12() as u32);
                 // ret.set_slice(12, 58, call.0);
                 ret.set_slice(12, 20, (call.0 >> 38) as u32);
                 ret.set_slice(32, 32, (call.0 >> 6) as u32);
@@ -278,7 +278,7 @@ impl Message {
 }
 
 pub mod callsign;
-use callsign::{C28, C58};
+use callsign::{hash::CallsignHash, C28, C58};
 
 mod grid15;
 pub use grid15::G15;
@@ -290,7 +290,6 @@ mod freetext;
 pub use freetext::F71;
 
 // TODO: implement these mocks
-pub struct H12(u16); // hash
 pub struct T71(Bitset); // telemetry data
 
 // TODO: implement remaining types; now only frequently used types are implemented

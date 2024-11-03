@@ -18,7 +18,8 @@ impl CallsignHash {
         }
     }
 
-    pub const fn as_u32(&self) -> u32 {
+    // NOTE: unknown bits are set to 0
+    pub const fn as_h22(&self) -> u32 {
         match self {
             CallsignHash::H22(x) => *x,
             CallsignHash::H12(x) => (*x as u32) << 10,
@@ -26,6 +27,25 @@ impl CallsignHash {
         }
     }
 
+    // NOTE: unknown bits are set to 0
+    pub const fn as_h12(&self) -> u16 {
+        match self {
+            CallsignHash::H22(x) => (*x >> 10) as u16,
+            CallsignHash::H12(x) => *x,
+            CallsignHash::H10(x) => *x >> 2,
+        }
+    }
+
+    // NOTE: unknown bits are set to 0
+    pub const fn as_h10(&self) -> u16 {
+        match self {
+            CallsignHash::H22(x) => (*x >> 12) as u16,
+            CallsignHash::H12(x) => *x >> 2,
+            CallsignHash::H10(x) => *x,
+        }
+    }
+
+    // returns range of possible 22-bit hashes
     pub const fn range(&self) -> core::ops::Range<u32> {
         match self {
             CallsignHash::H22(x) => *x..*x + 1,
@@ -34,10 +54,11 @@ impl CallsignHash {
         }
     }
 
+    // returns whether the two hashes *may* represent the same callsign
     pub fn matches(&self, other: &CallsignHash) -> bool {
         let d = self.depth().min(other.depth());
-        let v = self.as_u32().shr(22 - d);
-        let w = other.as_u32().shr(22 - d);
+        let v = self.as_h22().shr(22 - d);
+        let w = other.as_h22().shr(22 - d);
         v == w
     }
 }
@@ -76,7 +97,7 @@ where
     [FullCallsign; super::hashtable::table_size(N)]: Sized,
 {
     fn find_hash(&self, hash: CallsignHash) -> Option<&FullCallsign> {
-        self.get_partial(hash.as_u32())
+        self.get_partial(hash.as_h22())
             .filter(|(&key, _)| hash.matches(&CallsignHash::H22(key)))
             .map(|(_, value)| value)
             .next()
@@ -87,7 +108,7 @@ where
         if hash.is_none() {
             return false;
         }
-        let hash = hash.unwrap().as_u32();
+        let hash = hash.unwrap().as_h22();
         self.set(hash, *callsign);
         true
     }
@@ -103,7 +124,7 @@ impl CallsignHashTable for std::collections::BTreeMap<u32, FullCallsign> {
         if hash.is_none() {
             return false;
         }
-        let hash = hash.unwrap().as_u32();
+        let hash = hash.unwrap().as_h22();
         self.insert(hash, *callsign);
         true
     }
