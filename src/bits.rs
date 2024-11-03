@@ -22,9 +22,13 @@ impl Bitset {
 
     #[inline]
     pub fn set_slice(&mut self, start: usize, size: usize, value: u32) {
-        let value = value & ((1 << size) - 1);
         debug_assert!(size <= 32);
         debug_assert!(start + size <= Self::SIZE);
+        let value = if size == 32 {
+            value
+        } else {
+            value & ((1 << size) - 1)
+        };
         let start_word = start / 32;
         let start_bit = start % 32;
 
@@ -90,10 +94,13 @@ impl Bitset {
 fn set_range(v: &mut u32, start: usize, size: usize, value: u32) {
     debug_assert!(size <= 32);
     debug_assert!(start + size <= 32);
-    debug_assert!(value < 1 << size);
+    if size < 32 {
+        debug_assert!(value < 1 << size);
+    }
 
-    let value = value & ((1 << size) - 1);
-    let mask = !(((1 << size) - 1) << (32 - size - start));
+    // let value = value & ((1 << size) - 1);
+    let mask = if size == 32 { !0 } else { (1 << size) - 1 };
+    let mask = !(mask << (32 - size - start));
     *v &= mask;
     *v |= value << (32 - size - start);
 }
