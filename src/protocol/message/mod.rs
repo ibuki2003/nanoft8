@@ -275,6 +275,40 @@ impl Message {
         }
         ret
     }
+
+    pub fn register_callsigns(&self, hashtable: &mut impl CallsignHashTable) {
+        let mut buf = [0; 11];
+        match self {
+            Message::StdMsg { call1, call2, .. } => {
+                if !call1.is_hash() {
+                    call1
+                        .write_str(&mut buf, Some(hashtable))
+                        .map(|n| hashtable.add(&buf[..n]));
+                }
+                if !call2.is_hash() {
+                    call2
+                        .write_str(&mut buf, Some(hashtable))
+                        .map(|n| hashtable.add(&buf[..n]));
+                }
+            }
+            Message::EuVhf { call1, call2, .. } => {
+                if !call1.is_hash() {
+                    call1
+                        .write_str(&mut buf, Some(hashtable))
+                        .map(|n| hashtable.add(&buf[..n]));
+                }
+                if !call2.is_hash() {
+                    call2
+                        .write_str(&mut buf, Some(hashtable))
+                        .map(|n| hashtable.add(&buf[..n]));
+                }
+            }
+            Message::NonStdCall { call, .. } => {
+                call.write_str(&mut buf).map(|n| hashtable.add(&buf[..n]));
+            }
+            _ => {}
+        }
+    }
 }
 
 #[cfg(not(feature = "no_std"))]

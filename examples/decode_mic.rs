@@ -3,10 +3,15 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait as _};
 use nanoft8::{
     decoder::{Candidate, Decoder},
     minifloat::{FloatS, Fu8, F8},
-    protocol::{self, crc::check_crc, message::Message},
+    protocol::{
+        self,
+        crc::check_crc,
+        message::{callsign::hash::CallsignHashTable, Message},
+    },
     Bitset,
 };
 use num_complex::Complex32;
+use std::collections::BTreeMap;
 
 #[inline]
 fn sec() -> u32 {
@@ -22,6 +27,8 @@ type Dec = Decoder<SpecFloat, LLRFloat>;
 fn main() {
     let args = std::env::args().collect::<Vec<String>>();
     println!("Decoder size: {} Bytes", std::mem::size_of::<Dec>());
+
+    let mut hashtable = BTreeMap::<u32, [u8; 11]>::new();
 
     if args.len() < 2 {
         // from mic
@@ -65,7 +72,7 @@ fn main() {
 
                 rx.recv().ok()
             });
-            process(&mut iter, 8000);
+            process(&mut iter, 8000, &mut hashtable);
         }
     } else {
         // from file
@@ -100,13 +107,17 @@ fn main() {
             for i in 0..cnt {
                 println!("processing at {}", i * 15);
                 let mut iter = samples.by_ref().take(15 * rate as usize);
-                process(&mut iter, rate);
+                process(&mut iter, rate, &mut hashtable);
             }
         }
     }
 }
 
-fn process(source: &mut dyn Iterator<Item = f32>, rate: u32) {
+fn process(
+    source: &mut dyn Iterator<Item = f32>,
+    rate: u32,
+    hashtable: &mut impl CallsignHashTable,
+) {
     let mut decoder = Dec::default();
 
     let step: usize = (rate * 40 / 1000) as usize;
@@ -152,7 +163,7 @@ fn process(source: &mut dyn Iterator<Item = f32>, rate: u32) {
             eprintln!("WARN: overflow occurred");
         }
     }
-    print_candidates(&decoder.candidates);
+    print_candidates(&decoder.candidates, hashtable);
 }
 
 fn hanning_window(data: &mut [Complex32]) {
@@ -165,7 +176,7 @@ fn hanning_window(data: &mut [Complex32]) {
 const COLOR_GRAY: &str = "\x1b[38;5;240m";
 const COLOR_RESET: &str = "\x1b[0m";
 
-fn print_candidates<T: FloatS>(c: &[Candidate<T>]) {
+fn print_candidates<T: FloatS>(c: &[Candidate<T>], hashtable: &mut impl CallsignHashTable) {
     let mut c = Vec::from(c);
     // c.sort_by_cached_key(|x| x.strength.to_bits());
     c.sort_by_cached_key(|x| x.reliability.to_bits());
@@ -200,9 +211,15 @@ fn print_candidates<T: FloatS>(c: &[Candidate<T>]) {
             continue;
         }
 
-        let str = Message::decode(&bs)
-            .map(|msg| msg.to_string())
-            .unwrap_or("(invalid)".into());
+        let msg = Message::decode(&bs);
+
+        let str = msg
+            .as_ref()
+            .and_then(|msg| {
+                let n = msg.write_str(&mut buf, Some(hashtable))?;
+                std::str::from_utf8(&buf[..n]).ok()
+            })
+            .unwrap_or("(invalid)");
 
         println!(
             "{}{:>5} {:>8.1} {:>8.2} {:>8.2}  {:>3} {}{}",
@@ -215,6 +232,9 @@ fn print_candidates<T: FloatS>(c: &[Candidate<T>]) {
             str,
             COLOR_RESET
         );
+        if let Some(msg) = msg {
+            msg.register_callsigns(hashtable);
+        }
     }
     println!();
 }
