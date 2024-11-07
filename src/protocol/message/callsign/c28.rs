@@ -1,4 +1,4 @@
-use super::hash::CallsignHash;
+use super::hash::{CallsignHash, CallsignHashTable};
 use crate::{
     protocol::message::chars::Chars,
     util::{trim_u8str, write_slice},
@@ -78,37 +78,65 @@ impl C28 {
         Self(hash + Self::VALUE_HASH_RANGE.start())
     }
 
-    pub fn to_string<'a>(&self, out: &'a mut [u8]) -> &'a [u8] {
-        assert!(out.len() == 6);
+    pub fn is_hash(&self) -> bool {
+        Self::VALUE_HASH_RANGE.contains(&self.0)
+    }
 
+    pub fn write_str(
+        &self,
+        out: &mut [u8],
+        hashtable: Option<&impl CallsignHashTable>,
+    ) -> Option<usize> {
         if self.0 == Self::VALUE_DE {
-            out.copy_from_slice(b"DE    ");
+            write_slice(out, b"DE")
         } else if self.0 == Self::VALUE_QRZ {
-            out.copy_from_slice(b"QRZ   ");
+            write_slice(out, b"QRZ")
         } else if self.0 == Self::VALUE_CQ {
-            out.copy_from_slice(b"CQ    ");
+            write_slice(out, b"CQ")
         } else if Self::VALUE_CQNUM_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"CQ ___");
+            if out.len() < 6 {
+                return None;
+            }
+            out[..3].copy_from_slice(b"CQ ");
             let mut num = self.0 - Self::VALUE_CQNUM_RANGE.start();
             out[3] = b'0' + (num % 10) as u8;
             num /= 10;
             out[4] = b'0' + (num % 10) as u8;
             num /= 10;
             out[5] = b'0' + num as u8;
+            Some(6)
         } else if Self::VALUE_CQZONE_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"CQ____");
-            num_to_alphas(self.0 - Self::VALUE_CQZONE_RANGE.start(), &mut out[2..6]);
+            out[..3].copy_from_slice(b"CQ ");
+            let mut val = self.0 - Self::VALUE_CQZONE_RANGE.start();
+            let mut len = 0;
+            for x in out[3..].iter_mut() {
+                if val == 0 {
+                    break;
+                }
+                len += 1;
+
+                *x = Chars::AlphaSpc[(val % 27) as u8];
+                val /= 27;
+            }
+            if val > 0 {
+                // out is too short
+                return None;
+            }
+            out[3..(3 + len)].reverse();
+            Some(3 + len)
         } else if Self::VALUE_HASH_RANGE.contains(&self.0) {
-            out.copy_from_slice(b"<....>");
-            // TODO:
+            let hash = CallsignHash::H22(self.0 - Self::VALUE_HASH_RANGE.start());
+            hash.write_str(out, hashtable)
         } else if Self::VALUE_CALLSIGN_RANGE.contains(&self.0) {
-            Self::num_to_call(self.0 - Self::VALUE_CALLSIGN_RANGE.start(), out);
+            if out.len() < 6 {
+                return None;
+            }
+            Self::num_to_call(self.0 - Self::VALUE_CALLSIGN_RANGE.start(), &mut out[..6]);
+            Some(6)
         } else {
             // panic!("invalid C28 value: {}", self.0);
-            out.copy_from_slice(b"ERROR ");
+            Some(0)
         }
-
-        out
     }
 
     fn num_to_call(mut val: u32, out: &mut [u8]) -> &[u8] {
@@ -143,12 +171,13 @@ fn alphas_to_num(seq: &[u8]) -> u32 {
     val
 }
 
-fn num_to_alphas(mut val: u32, seq: &mut [u8]) {
-    for x in seq.iter_mut().rev() {
-        *x = Chars::AlphaSpc[(val % 27) as u8];
-        val /= 27;
+#[cfg(not(feature = "no_std"))]
+impl core::fmt::Display for C28 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let mut out = [0u8; 6];
+        let n = self.write_str(&mut out, None::<&()>).unwrap();
+        f.write_str(core::str::from_utf8(&out[..n]).unwrap())
     }
-    debug_assert_eq!(val, 0);
 }
 
 #[cfg(test)]
@@ -191,7 +220,7 @@ mod tests {
             assert_eq!(c.0, *num);
 
             let c = C28(*num);
-            c.to_string(&mut out);
+            c.write_str(&mut out, None::<&()>).unwrap();
             let mut out: &[u8] = &out;
             while out.first() == Some(&b' ') {
                 out = &out[1..];
@@ -205,24 +234,24 @@ mod tests {
 
     #[test]
     fn test_c28_to_string() {
-        let mut out = [0u8; 6];
+        let mut out = [0u8; 16];
 
         const TESTCASES: &[(u32, &[u8])] = &[
-            (C28::VALUE_DE, b"DE    "),
-            (C28::VALUE_QRZ, b"QRZ   "),
-            (C28::VALUE_CQ, b"CQ    "),
+            (C28::VALUE_DE, b"DE"),
+            (C28::VALUE_QRZ, b"QRZ"),
+            (C28::VALUE_CQ, b"CQ"),
             (*C28::VALUE_CQNUM_RANGE.start(), b"CQ 000"),
-            (1004, b"CQ   A"),
-            (1031, b"CQ  AA"),
+            (1004, b"CQ A"),
+            (1031, b"CQ AA"),
             (1760, b"CQ AAA"),
-            (21443, b"CQAAAA"),
-            (532443, b"CQZZZZ"),
+            (21443, b"CQ AAAA"),
+            (532443, b"CQ ZZZZ"),
             // (*C28::VALUE_HASH_RANGE.start(), b"<.....>"),
         ];
         for (num, ret) in TESTCASES {
             let c = C28(*num);
-            c.to_string(&mut out);
-            assert_eq!(out, *ret);
+            let n = c.write_str(&mut out, None::<&()>).unwrap();
+            assert_eq!(&out[..n], *ret);
         }
     }
 }

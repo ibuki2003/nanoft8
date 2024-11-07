@@ -31,9 +31,6 @@ fn main() {
             continue;
         };
 
-        let mut str = [0; 64];
-        msg.to_string(&mut str);
-        let str = String::from_utf8_lossy(&str);
-        println!("{}", str);
+        println!("{}", msg);
     }
 }

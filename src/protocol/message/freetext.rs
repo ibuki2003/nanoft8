@@ -31,8 +31,10 @@ impl F71 {
         Some(Self(bs))
     }
 
-    pub fn to_string(&self, str: &mut [u8]) {
-        assert!(str.len() >= 13);
+    pub fn write_str(&self, str: &mut [u8]) -> Option<usize> {
+        if str.len() < 13 {
+            return None;
+        }
         let str = &mut str[..13];
         let mut v = self.0 .0;
 
@@ -51,6 +53,17 @@ impl F71 {
             }) as u8;
             *c = Chars::Full.get(rem);
         }
+
+        Some(13)
+    }
+}
+
+#[cfg(not(feature = "no_std"))]
+impl core::fmt::Display for F71 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let mut str = [0u8; 13];
+        self.write_str(&mut str);
+        f.write_str(core::str::from_utf8(&str).unwrap())
     }
 }
 
@@ -69,7 +82,7 @@ mod tests {
         ];
         for (expected, bits) in testcases {
             let mut str = [b' '; 13];
-            F71(Bitset(*bits)).to_string(&mut str);
+            F71(Bitset(*bits)).write_str(&mut str).unwrap();
             assert_eq!(&str, *expected);
 
             let f = F71::from_string(&mut str).unwrap();

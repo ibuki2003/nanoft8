@@ -1,5 +1,8 @@
 use super::FullCallsign;
-use crate::{protocol::message::chars::Chars, util::trim_u8str};
+use crate::{
+    protocol::message::chars::Chars,
+    util::{trim_u8str, write_slice},
+};
 use core::ops::Shr as _;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -61,6 +64,19 @@ impl CallsignHash {
         let w = other.as_h22().shr(22 - d);
         v == w
     }
+
+    pub fn write_str(
+        &self,
+        out: &mut [u8],
+        hash: Option<&impl CallsignHashTable>,
+    ) -> Option<usize> {
+        let callsign = hash.and_then(|x| x.find_hash(*self));
+        if let Some(c) = callsign {
+            write_slice(out, c.as_ref())
+        } else {
+            write_slice(out, b"<....>")
+        }
+    }
 }
 
 pub fn hash_callsign(str: &[u8]) -> Option<CallsignHash> {
@@ -87,7 +103,7 @@ pub fn hash_callsign(str: &[u8]) -> Option<CallsignHash> {
 pub trait CallsignHashTable {
     // return first match
     fn find_hash(&self, hash: CallsignHash) -> Option<&FullCallsign>;
-    fn add(&mut self, callsign: &FullCallsign) -> bool;
+    fn add(&mut self, callsign: &[u8]) -> bool;
 }
 
 impl<const N: usize, const M: usize> CallsignHashTable
@@ -102,13 +118,15 @@ where
             .next()
     }
 
-    fn add(&mut self, callsign: &FullCallsign) -> bool {
+    fn add(&mut self, callsign: &[u8]) -> bool {
         let hash = hash_callsign(callsign);
         if hash.is_none() {
             return false;
         }
         let hash = hash.unwrap().as_h22();
-        self.set(hash, *callsign);
+        let mut buf = [0; 11];
+        write_slice(&mut buf, callsign);
+        self.set(hash, buf);
         true
     }
 }
@@ -118,14 +136,26 @@ impl CallsignHashTable for std::collections::BTreeMap<u32, FullCallsign> {
     fn find_hash(&self, hash: CallsignHash) -> Option<&FullCallsign> {
         self.range(hash.range()).next().map(|(_, v)| v)
     }
-    fn add(&mut self, callsign: &FullCallsign) -> bool {
+    fn add(&mut self, callsign: &[u8]) -> bool {
         let hash = hash_callsign(callsign);
         if hash.is_none() {
             return false;
         }
         let hash = hash.unwrap().as_h22();
-        self.insert(hash, *callsign);
+        let mut buf = [0; 11];
+        write_slice(&mut buf, callsign);
+        self.insert(hash, buf);
         true
+    }
+}
+
+// dummy implementation
+impl CallsignHashTable for () {
+    fn find_hash(&self, _hash: CallsignHash) -> Option<&FullCallsign> {
+        None
+    }
+    fn add(&mut self, _callsign: &[u8]) -> bool {
+        false
     }
 }
 

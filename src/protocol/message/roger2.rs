@@ -28,7 +28,7 @@ impl R2 {
         }
     }
 
-    pub fn write(&self, out: &mut [u8]) -> Option<usize> {
+    pub fn write_str(&self, out: &mut [u8]) -> Option<usize> {
         match self {
             Self::BLANK => write_slice(out, b" "),
             Self::RRR => write_slice(out, b"RRR"),
@@ -42,7 +42,7 @@ impl R2 {
 impl core::fmt::Display for R2 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let mut s = [0; 4];
-        let n = self.write(&mut s).unwrap();
+        let n = self.write_str(&mut s).unwrap();
         f.write_str(core::str::from_utf8(&s[..n]).unwrap())
     }
 }

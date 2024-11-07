@@ -201,10 +201,7 @@ fn print_candidates<T: FloatS>(c: &[Candidate<T>]) {
         }
 
         let str = Message::decode(&bs)
-            .map(|msg| {
-                msg.to_string(&mut buf);
-                String::from_utf8_lossy(buf.trim_ascii())
-            })
+            .map(|msg| msg.to_string())
             .unwrap_or("(invalid)".into());
 
         println!(

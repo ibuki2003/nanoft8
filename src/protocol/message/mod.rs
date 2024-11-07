@@ -98,28 +98,27 @@ impl Message {
         }
     }
 
-    pub fn to_string(&self, out: &mut [u8]) {
-        out.fill(b' ');
-
+    pub fn write_str(
+        &self,
+        out: &mut [u8],
+        hashtable: Option<&impl CallsignHashTable>,
+    ) -> Option<usize> {
         match self {
-            Self::FreeText(f71) => {
-                f71.to_string(out);
-            }
+            Self::FreeText(f71) => f71.write_str(out),
             Self::DXpedition => {
                 // K1ABC RR73; W9XYZ <KH1/KH7Z> -08
-                out[..10].copy_from_slice(b"DXpedition");
+                write_slice(out, b"DXpedition")
             }
             Self::FieldDay0 => {
                 // K1ABC W9XYZ 6A WI
-                out[..9].copy_from_slice(b"FieldDay0");
+                write_slice(out, b"FieldDay0")
             }
             Self::FieldDay1 => {
                 // W9XYZ K1ABC R 17B EMA
-                out[..9].copy_from_slice(b"FieldDay1");
+                // out[..9].copy_from_slice(b"FieldDay1");
+                write_slice(out, b"FieldDay1")
             }
-            Self::Telemetry(_) => {
-                out[..9].copy_from_slice(b"Telemetry");
-            }
+            Self::Telemetry(_) => write_slice(out, b"Telemetry"),
             Self::StdMsg {
                 call1,
                 call1_r,
@@ -128,18 +127,19 @@ impl Message {
                 r,
                 grid,
             } => {
-                // // K1ABC/R W9XYZ/R R EN37
-                writes_str! { out;
-                    6 => call1.to_string(_);
-                    2 => if *call1_r { _.copy_from_slice(b"/R") };
-                    1 => {};
-                    6 => call2.to_string(_);
-                    2 => if *call2_r { _.copy_from_slice(b"/R") };
-                    1 => {};
-                    1 => if *r { _.copy_from_slice(b"R") };
-                    1 => {};
-                    4 => grid.to_string(_);
-                };
+                // K1ABC/R W9XYZ/R R EN37
+                writes! { out,
+                    call1.write_str(_, hashtable),
+                    if *call1_r { write_slice(_, b"/R") } else { Some(0) },
+                    write_slice(_, b" "),
+
+                    call2.write_str(_, hashtable),
+                    if *call2_r { write_slice(_, b"/R") } else { Some(0) },
+                    write_slice(_, b" "),
+
+                    if *r { write_slice(_, b"R ") } else { Some(0) },
+                    grid.write_str(_),
+                }
             }
             Self::EuVhf {
                 call1,
@@ -150,59 +150,60 @@ impl Message {
                 grid,
             } => {
                 // G4ABC/P PA9XYZ JO22
-                writes_str! { out;
-                    6 => call1.to_string(_);
-                    2 => if *call1_p { _.copy_from_slice(b"/P") };
-                    1 => {};
-                    6 => call2.to_string(_);
-                    2 => if *call2_p { _.copy_from_slice(b"/P") };
-                    1 => {};
-                    1 => if *r { _.copy_from_slice(b"R") };
-                    1 => {};
-                    4 => grid.to_string(_);
-                };
+                writes! { out,
+                    call1.write_str(_, hashtable),
+                    if *call1_p { write_slice(out, b"/P") } else { Some(0) },
+                    write_slice(_, b" "),
+
+                    call2.write_str(_, hashtable),
+                    if *call2_p { write_slice(out, b"/P") } else { Some(0) },
+                    write_slice(_, b" "),
+
+                    if *r { write_slice(out, b"R ") } else { Some(0) },
+                    grid.write_str(_),
+                }
             }
             Self::RttyRu => {
                 // K1ABC W9XYZ 579 WI
-                out[..6].copy_from_slice(b"RttyRu");
+                write_slice(out, b"RttyRu")
             }
             Self::NonStdCall {
                 cq,
                 call,
-                // hash,
+                hash,
                 hash_is_second,
                 r,
                 ..
             } => {
                 // <W9XYZ> PJ4/K1ABC RRR
                 if *cq {
-                    writes_str! { out;
-                        3 => _.copy_from_slice(b"CQ ");
-                        11 => call.to_string(_);
-                    };
+                    writes! { out,
+                        write_slice(_, b"CQ "),
+                        call.write_str(_),
+                    }
                 } else if *hash_is_second {
-                    writes_str! { out;
-                        11 => call.to_string(_);
-                        1 => {};
-                        6 => _.copy_from_slice(b"<....>");
-                        1 => {};
-                        4 => r.to_string(_);
-                    };
+                    writes! { out,
+                        call.write_str(_),
+                        write_slice(_, b" "),
+                        hash.write_str(_, hashtable),
+                        write_slice(_, b" "),
+                        r.write_str(_),
+                    }
                 } else {
-                    writes_str! { out;
-                        6 => _.copy_from_slice(b"<....>");
-                        1 => {};
-                        11 => call.to_string(_);
-                        1 => {};
-                        4 => r.to_string(_);
-                    };
+                    writes! { out,
+                        hash.write_str(_, hashtable),
+                        write_slice(_, b" "),
+                        call.write_str(_),
+                        write_slice(_, b" "),
+                        r.write_str(_),
+                    }
                 }
             }
             Self::EuVhfHash => {
                 // <G4ABC> <PA9XYZ> R 570007 JO22DB
-                writes_str! { out;
-                    9 => _.copy_from_slice(b"EuVhfHash");
-                };
+                writes! { out,
+                    write_slice(_, b"EuVhfHash"),
+                }
             }
         }
     }
@@ -276,8 +277,20 @@ impl Message {
     }
 }
 
+#[cfg(not(feature = "no_std"))]
+impl core::fmt::Display for Message {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let mut s = [0; 64];
+        let n = self.write_str(&mut s, None::<&()>).unwrap();
+        f.write_str(core::str::from_utf8(&s[..n]).unwrap())
+    }
+}
+
 pub mod callsign;
-use callsign::{hash::CallsignHash, C28, C58};
+use callsign::{
+    hash::{CallsignHash, CallsignHashTable},
+    C28, C58,
+};
 
 mod grid15;
 pub use grid15::G15;
