@@ -1,4 +1,4 @@
-use crate::Bitset;
+use crate::{util::write_slice, Bitset};
 
 pub mod chars;
 
@@ -35,20 +35,19 @@ pub enum Message {
     EuVhfHash,
 }
 
-macro_rules! writes_str {
+macro_rules! writes {
     (
-        $out:ident;
-        $( $len:expr => $body: stmt );*
-        $(;)?
+        $out:ident,
+        $( $body: expr ),*
+        $(,)?
     ) => {
         {
             let mut i_ = 0;
             $(
-                macro_find_and_replace::replace_token!(_, (&mut $out[i_..i_+$len]), $body);
-                i_ += $len;
+                i_ += macro_find_and_replace::replace_token!(_, (&mut $out[i_..]), $body)?;
             )*
-            i_
-        };
+            Some(i_)
+        }
     };
 }
 

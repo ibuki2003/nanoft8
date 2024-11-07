@@ -1,3 +1,5 @@
+use crate::util::write_slice;
+
 // RRR message
 pub enum R2 {
     BLANK,
@@ -26,13 +28,21 @@ impl R2 {
         }
     }
 
-    pub fn to_string(&self, out: &mut [u8]) {
-        assert_eq!(out.len(), 4);
+    pub fn write(&self, out: &mut [u8]) -> Option<usize> {
         match self {
-            Self::BLANK => out.copy_from_slice(b"    "),
-            Self::RRR => out.copy_from_slice(b"RRR "),
-            Self::RR73 => out.copy_from_slice(b"RR73"),
-            Self::V73 => out.copy_from_slice(b"73  "),
+            Self::BLANK => write_slice(out, b" "),
+            Self::RRR => write_slice(out, b"RRR"),
+            Self::RR73 => write_slice(out, b"RR73"),
+            Self::V73 => write_slice(out, b"73"),
         }
+    }
+}
+
+#[cfg(not(feature = "no_std"))]
+impl core::fmt::Display for R2 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let mut s = [0; 4];
+        let n = self.write(&mut s).unwrap();
+        f.write_str(core::str::from_utf8(&s[..n]).unwrap())
     }
 }

@@ -99,9 +99,8 @@ fn main() {
             let cnt = (len - (5 * rate) + (rate * 15 - 1)) / rate / 15; // ceil
             for i in 0..cnt {
                 println!("processing at {}", i * 15);
-                let mut iter = TakeAndSkip::new(samples, 15 * rate as usize);
+                let mut iter = samples.by_ref().take(15 * rate as usize);
                 process(&mut iter, rate);
-                samples = iter.destroy();
             }
         }
     }
@@ -221,31 +220,4 @@ fn print_candidates<T: FloatS>(c: &[Candidate<T>]) {
         );
     }
     println!();
-}
-
-struct TakeAndSkip<I: Iterator> {
-    iter: I,
-    count: usize,
-}
-
-impl<I: Iterator> Iterator for TakeAndSkip<I> {
-    type Item = I::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.count == 0 {
-            return None;
-        }
-        self.count -= 1;
-        self.iter.next()
-    }
-}
-
-impl<I: Iterator> TakeAndSkip<I> {
-    fn new(iter: I, count: usize) -> Self {
-        Self { iter, count }
-    }
-
-    fn destroy(self) -> I {
-        self.iter
-    }
 }

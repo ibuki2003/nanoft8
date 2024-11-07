@@ -1,6 +1,9 @@
+use super::hash::CallsignHash;
+use crate::{
+    protocol::message::chars::Chars,
+    util::{trim_u8str, write_slice},
+};
 use core::ops::RangeInclusive;
-
-use crate::{protocol::message::chars::Chars, util::trim_u8str};
 
 pub struct C28(pub u32);
 
