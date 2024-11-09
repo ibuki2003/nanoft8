@@ -52,21 +52,19 @@ impl<LLRFloat: FloatS> Candidate<LLRFloat> {
         if self.band_power == 0.0 {
             return f32::NEG_INFINITY;
         }
-        (self.power / self.band_power).log10() * 10.0 - 31.5 // magic number :)
+        (self.power / self.band_power).log10() * 20.0 - 33.72 // magic number :)
     }
 
     fn update_power<SpecFloat: FloatU>(&mut self, spec: &[SpecFloat]) {
         debug_assert!(spec.len() == FREQ_WIDTH);
 
-        self.power += fsquare(
-            (*spec
-                .iter()
-                .step_by(FREQ_SCALE)
-                .max_by_key(|x| x.to_inner())
-                .unwrap())
-            .into(),
-        );
-        self.band_power += fsquare((*spec.iter().min_by_key(|x| x.to_inner()).unwrap()).into());
+        self.power += (*spec
+            .iter()
+            .step_by(FREQ_SCALE)
+            .max_by_key(|x| x.to_inner())
+            .unwrap())
+        .into();
+        self.band_power += (*spec.iter().min_by_key(|x| x.to_inner()).unwrap()).into();
     }
 }
 
@@ -185,7 +183,8 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
         for i in 0..protocol::FSK_ARITY {
             for (j, row) in sm.iter_mut().enumerate() {
                 let bit = (protocol::GRAY_CODE[i] & (4 >> j) != 0) as usize;
-                row[bit] += fsquare(data[i * FREQ_SCALE].into());
+                let v = data[i * FREQ_SCALE].into();
+                row[bit] += v * v;
             }
         }
 
@@ -194,8 +193,4 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
             out[i] = v.into();
         }
     }
-}
-
-fn fsquare(x: f32) -> f32 {
-    x * x
 }

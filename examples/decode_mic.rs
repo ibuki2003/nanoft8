@@ -149,19 +149,11 @@ fn process(
         hanning_window(&mut fftbuf[..size]);
         fft.process(&mut fftbuf);
 
-        let mut over = false;
         fftbuf[..1024].iter().enumerate().for_each(|(i, x)| {
-            let x: Fu8 = (x / 10.).norm().into();
-            if x.0 == Fu8::INF.0 {
-                over = true;
-            }
-            spectrum[i] = x;
+            let x = (x / 10.).norm();
+            spectrum[i] = x.into();
         });
         decoder.put_spectrum(&spectrum);
-
-        if over {
-            eprintln!("WARN: overflow occurred");
-        }
     }
     print_candidates(&decoder.candidates, hashtable);
 }
