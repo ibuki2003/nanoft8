@@ -12,16 +12,8 @@ impl<const SIGNED: bool, const EXP_SIZE: usize, const EXP_BIAS: u8>
     pub const ZERO: Self = Self(0);
 
     pub fn as_f32(self) -> f32 {
-        if self.0 & 0x7f == 0 {
+        if SIGNED && (self.0 & 0x7f == 0) {
             return if (self.0 >> 7) == 0 { 0. } else { -0. };
-        }
-
-        if self.0 & 0x7f == 0x7f {
-            return if (self.0 >> 7) == 0 {
-                f32::INFINITY
-            } else {
-                f32::NEG_INFINITY
-            };
         }
 
         let sign = if SIGNED { (self.0 >> 7) as u32 } else { 0 };
