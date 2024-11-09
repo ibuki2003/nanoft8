@@ -193,4 +193,19 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
             out[i] = v.into();
         }
     }
+
+    pub fn reset(&mut self) {
+        self.time_step = 0;
+        // self.candidates = [Candidate::default(); CANDIDATES_COUNT];
+        for c in self.candidates.iter_mut() {
+            *c = Candidate::default();
+        }
+        // self.spectrum_buffer = [[SpecFloat::default(); SPECTRUM_SIZE]; BUFFER_SIZE];
+        for buf in self.spectrum_buffer.iter_mut() {
+            // *buf = [SpecFloat::default(); SPECTRUM_SIZE];
+            for x in buf.iter_mut() {
+                *x = SpecFloat::default();
+            }
+        }
+    }
 }
