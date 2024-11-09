@@ -114,19 +114,41 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
             // data not enough; do nothing
         } else if self.time_step < BUFFER_SIZE * 3 / 2 {
             // find markers
-            for i in 0..SPECTRUM_SIZE - FREQ_WIDTH {
-                let mut power: f32 = 0.0;
-                let mut band_power: f32 = 0.0;
-                for j in [1, BUFFER_SIZE - 24] {
-                    for (k, &marker) in protocol::MARKER_COSTAS.iter().enumerate() {
-                        let idx = (self.time_step + j + k * TIME_SCALE) % BUFFER_SIZE;
-                        power += self.spectrum_buffer[idx][i + marker * FREQ_SCALE].into();
-                        for k in 0..protocol::COSTAS_SIZE {
-                            band_power += self.spectrum_buffer[idx][i + k * FREQ_SCALE].into();
+            let mut power = [0.0f32; SPECTRUM_SIZE];
+            let mut band_power = [0.0f32; SPECTRUM_SIZE];
+
+            for j in [1, BUFFER_SIZE - 24] {
+                for k in 0..protocol::COSTAS_SIZE {
+                    let idx = (self.time_step + j + k * TIME_SCALE) % BUFFER_SIZE;
+                    let row = &self.spectrum_buffer[idx];
+
+                    for i in 0..SPECTRUM_SIZE {
+                        let val: f32 = row[i].into();
+
+                        // marker
+                        let m = protocol::MARKER_COSTAS[k] * FREQ_SCALE;
+                        if i >= m {
+                            power[i - m] += val;
+                        }
+
+                        // band power
+                        for d in 0..protocol::COSTAS_SIZE {
+                            let d = d * FREQ_SCALE;
+                            if i > d {
+                                band_power[i - d] += val;
+                            }
                         }
                     }
                 }
-                band_power = (band_power - power) / (protocol::COSTAS_SIZE - 1) as f32;
+            }
+
+            for (i, (&power, &band_power)) in power
+                .iter()
+                .zip(band_power.iter())
+                .take(SPECTRUM_SIZE - FREQ_WIDTH)
+                .enumerate()
+            {
+                let band_power = (band_power - power) / (protocol::COSTAS_SIZE - 1) as f32;
                 let reliability = power / band_power;
                 if reliability > DECODE_THRESHOLD {
                     let candidate = &mut self.candidates[i / CANDIDATES_BUCKET_SIZE];
