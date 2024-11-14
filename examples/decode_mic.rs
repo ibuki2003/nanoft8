@@ -155,7 +155,7 @@ fn process(
         });
         decoder.put_spectrum(&spectrum);
     }
-    print_candidates(&decoder.candidates, hashtable);
+    print_candidates(&decoder, hashtable);
 }
 
 fn hanning_window(data: &mut [Complex32]) {
@@ -168,8 +168,8 @@ fn hanning_window(data: &mut [Complex32]) {
 const COLOR_GRAY: &str = "\x1b[38;5;240m";
 const COLOR_RESET: &str = "\x1b[0m";
 
-fn print_candidates<T: FloatS>(c: &[Candidate<T>], hashtable: &mut impl CallsignHashTable) {
-    let mut c = Vec::from(c);
+fn print_candidates(dec: &Dec, hashtable: &mut impl CallsignHashTable) {
+    let mut c = dec.candidates().collect::<Vec<_>>();
     // c.sort_by_cached_key(|x| x.strength.to_bits());
     c.sort_by_cached_key(|x| x.reliability.to_bits());
     c.reverse();

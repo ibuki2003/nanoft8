@@ -84,26 +84,30 @@ impl<LLRFloat: FloatS> Default for Candidate<LLRFloat> {
 pub struct Decoder<SpecFloat: FloatU, LLRFloat: FloatS> {
     pub time_step: usize,
 
-    pub spectrum_buffer: [[SpecFloat; SPECTRUM_SIZE]; BUFFER_SIZE],
+    spectrum_buffer: [[SpecFloat; SPECTRUM_SIZE]; BUFFER_SIZE],
 
-    pub candidates: [Candidate<LLRFloat>; CANDIDATES_COUNT],
+    candidates: [Candidate<LLRFloat>; CANDIDATES_COUNT],
 }
 
 impl<SpecFloat: FloatU, LLRFloat: FloatS> Default for Decoder<SpecFloat, LLRFloat> {
     fn default() -> Self {
-        Self {
-            time_step: 0,
-            spectrum_buffer: [[SpecFloat::default(); SPECTRUM_SIZE]; BUFFER_SIZE],
-            candidates: [Candidate::default(); CANDIDATES_COUNT],
-        }
+        Self::new()
     }
 }
 
 impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
     pub type Spectrum = [SpecFloat; SPECTRUM_SIZE];
 
-    // update decoder with new spectrum data
-    // expects spectrum with 3.125Hz per bin, 160ms long, 40ms step
+    pub fn new() -> Self {
+        Self {
+            time_step: 0,
+            spectrum_buffer: [[SpecFloat::default(); SPECTRUM_SIZE]; BUFFER_SIZE],
+            candidates: [Candidate::default(); CANDIDATES_COUNT],
+        }
+    }
+
+    /// update decoder with new spectrum data
+    /// expects spectrum with 3.125Hz per bin, 160ms long, 40ms step
     pub fn put_spectrum(&mut self, data: &Self::Spectrum) {
         let buf_idx = self.time_step % BUFFER_SIZE;
         // find markers
@@ -229,5 +233,9 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
                 *x = SpecFloat::default();
             }
         }
+    }
+
+    pub fn candidates(&self) -> impl Iterator<Item = &Candidate<LLRFloat>> {
+        self.candidates.iter().filter(|c| !c.is_empty())
     }
 }

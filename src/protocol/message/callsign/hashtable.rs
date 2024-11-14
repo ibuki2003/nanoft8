@@ -29,7 +29,7 @@ where
 
     pub const SIZE: usize = table_size(N);
 
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         #![allow(path_statements)]
         Self::_ASSERT;
         Self {
