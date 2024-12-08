@@ -235,7 +235,7 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
         }
     }
 
-    pub fn candidates(&self) -> impl Iterator<Item = &Candidate<LLRFloat>> {
-        self.candidates.iter().filter(|c| !c.is_empty())
+    pub fn candidates(&self) -> &[Candidate<LLRFloat>] {
+        &self.candidates
     }
 }
