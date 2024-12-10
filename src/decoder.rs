@@ -1,5 +1,5 @@
 use crate::{
-    minifloat::{FloatS, FloatU},
+    float::{FloatS, FloatU},
     protocol,
 };
 
@@ -61,10 +61,14 @@ impl<LLRFloat: FloatS> Candidate<LLRFloat> {
         self.power += (*spec
             .iter()
             .step_by(FREQ_SCALE)
-            .max_by_key(|x| x.to_inner())
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap())
         .into();
-        self.band_power += (*spec.iter().min_by_key(|x| x.to_inner()).unwrap()).into();
+        self.band_power += (*spec
+            .iter()
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap())
+        .into();
     }
 }
 

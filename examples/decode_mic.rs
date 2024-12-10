@@ -2,7 +2,6 @@ use chrono::Timelike as _;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait as _};
 use nanoft8::{
     decoder::{Candidate, Decoder},
-    minifloat::{FloatS, Fu8, F8},
     protocol::{
         self,
         crc::check_crc,
@@ -18,10 +17,8 @@ fn sec() -> u32 {
     chrono::Utc::now().second()
 }
 
-type SpecFloat = Fu8;
-type LLRFloat = F8;
-// type SpecFloat = f32;
-// type LLRFloat = f32;
+type SpecFloat = f32;
+type LLRFloat = f32;
 type Dec = Decoder<SpecFloat, LLRFloat>;
 
 fn main() {
@@ -151,7 +148,7 @@ fn process(
 
         fftbuf[..1024].iter().enumerate().for_each(|(i, x)| {
             let x = (x / 10.).norm();
-            spectrum[i] = x.into();
+            spectrum[i] = x;
         });
         decoder.put_spectrum(&spectrum);
     }
@@ -169,7 +166,7 @@ const COLOR_GRAY: &str = "\x1b[38;5;240m";
 const COLOR_RESET: &str = "\x1b[0m";
 
 fn print_candidates(dec: &Dec, hashtable: &mut impl CallsignHashTable) {
-    let mut c = dec.candidates().collect::<Vec<_>>();
+    let mut c = dec.candidates().iter().collect::<Vec<_>>();
     // c.sort_by_cached_key(|x| x.strength.to_bits());
     c.sort_by_cached_key(|x| x.reliability.to_bits());
     c.reverse();

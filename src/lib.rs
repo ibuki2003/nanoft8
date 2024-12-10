@@ -8,6 +8,6 @@ pub mod protocol;
 mod bits;
 pub use bits::Bitset;
 
-pub mod minifloat;
+pub mod float;
 
 pub mod util;

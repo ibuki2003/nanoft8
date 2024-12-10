@@ -1,5 +1,5 @@
 use super::{BODY_BITS, CRC_BITS, PAYLOAD_BITS};
-use crate::{minifloat::FloatS, Bitset};
+use crate::{float::FloatS, Bitset};
 
 #[cfg(feature = "no_std")]
 use micromath::F32Ext;

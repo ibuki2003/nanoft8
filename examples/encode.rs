@@ -4,7 +4,7 @@ use nanoft8::{
         ldpc,
         message::{Message, C28, G15},
     },
-    Bitset, F8,
+    Bitset,
 };
 
 fn main() {
@@ -18,7 +18,7 @@ fn main() {
     };
 
     let mut str = [0; 64];
-    msg.to_string(&mut str);
+    msg.write_str(&mut str, None::<&()>);
     let str = String::from_utf8_lossy(&str);
     println!("msg: {}", str);
 
@@ -39,7 +39,6 @@ fn main() {
     let llr = buf
         .iter()
         .map(|&b| if b { 1.0 } else { -1.0 })
-        .map(F8::from_f32)
         .collect::<Vec<_>>();
     println!("err: {}", ldpc::check(&buf));
 
@@ -50,7 +49,7 @@ fn main() {
 
     let msg = Message::decode(&bs).unwrap();
     let mut str = [0; 64];
-    msg.to_string(&mut str);
+    msg.write_str(&mut str, None::<&()>);
     let str = String::from_utf8_lossy(&str);
     println!("decoded: {}", str);
 }
