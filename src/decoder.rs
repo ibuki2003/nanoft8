@@ -112,10 +112,12 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
 
     /// update decoder with new spectrum data
     /// expects spectrum with 3.125Hz per bin, 160ms long, 40ms step
-    pub fn put_spectrum(&mut self, data: &Self::Spectrum) {
+    pub fn put_spectrum(&mut self, data: &[SpecFloat]) {
+        assert!(data.len() >= SPECTRUM_SIZE);
         let buf_idx = self.time_step % BUFFER_SIZE;
         // find markers
-        self.spectrum_buffer[buf_idx] = *data;
+        // self.spectrum_buffer[buf_idx] = *data;
+        self.spectrum_buffer[buf_idx].copy_from_slice(&data[..SPECTRUM_SIZE]);
         // update candidates
 
         if self.time_step < BUFFER_SIZE - 1 {
