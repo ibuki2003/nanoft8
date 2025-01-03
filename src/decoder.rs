@@ -100,8 +100,6 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Default for Decoder<SpecFloat, LLRFloa
 }
 
 impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
-    pub type Spectrum = [SpecFloat; SPECTRUM_SIZE];
-
     pub fn new() -> Self {
         Self {
             time_step: 0,
@@ -122,8 +120,8 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
 
         if self.time_step < BUFFER_SIZE - 1 {
             // data not enough; do nothing
-        } else if self.time_step < BUFFER_SIZE * 3 / 2 {
-            // find markers
+        } else if self.time_step < BUFFER_SIZE + 5000 / 40 {
+            // find markers, up to first 5s
             let mut power = [0.0f32; SPECTRUM_SIZE];
             let mut band_power = [0.0f32; SPECTRUM_SIZE];
 
@@ -159,6 +157,9 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
                 .enumerate()
             {
                 let band_power = (band_power - power) / (protocol::COSTAS_SIZE - 1) as f32;
+                if band_power == 0.0 {
+                    continue;
+                }
                 let reliability = power / band_power;
                 if reliability > DECODE_THRESHOLD {
                     let candidate = &mut self.candidates[i / CANDIDATES_BUCKET_SIZE];
@@ -232,13 +233,19 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
         for c in self.candidates.iter_mut() {
             *c = Candidate::default();
         }
-        // self.spectrum_buffer = [[SpecFloat::default(); SPECTRUM_SIZE]; BUFFER_SIZE];
-        for buf in self.spectrum_buffer.iter_mut() {
-            // *buf = [SpecFloat::default(); SPECTRUM_SIZE];
-            for x in buf.iter_mut() {
-                *x = SpecFloat::default();
-            }
-        }
+
+        // copy last some data to the beginning; for the next phase
+        // 375 = 15s / 40ms 15 / 40
+        let d = if (375..BUFFER_SIZE * 3).contains(&self.time_step) {
+            let d = self.time_step - 375;
+            let (a, b) = self.spectrum_buffer.split_at_mut(375);
+            a[..d].copy_from_slice(&b[..d]);
+            d
+        } else {
+            0
+        };
+
+        self.spectrum_buffer[d..].fill([SpecFloat::default(); SPECTRUM_SIZE]);
     }
 
     pub fn candidates(&self) -> &[Candidate<LLRFloat>] {
