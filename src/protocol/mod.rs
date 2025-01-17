@@ -17,7 +17,8 @@ pub const FSK_ARITY: usize = 1 << FSK_DEPTH;
 pub const COSTAS_SIZE: usize = 7;
 pub const MARKER_COSTAS: [usize; COSTAS_SIZE] = [3, 1, 4, 0, 6, 5, 2];
 
-pub const GRAY_CODE: [u8; FSK_ARITY] = [0b000, 0b001, 0b011, 0b010, 0b110, 0b100, 0b101, 0b111];
+pub const GRAY_CODE: [u8; FSK_ARITY] = [0, 1, 3, 2, 5, 6, 4, 7];
+pub const GRAY_CODE_INV: [u8; FSK_ARITY] = [0b000, 0b001, 0b011, 0b010, 0b110, 0b100, 0b101, 0b111];
 
 pub mod message;
 

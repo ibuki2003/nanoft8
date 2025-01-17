@@ -215,7 +215,7 @@ impl<SpecFloat: FloatU, LLRFloat: FloatS> Decoder<SpecFloat, LLRFloat> {
         let mut sm = [[0.0f32; 2]; protocol::FSK_DEPTH];
         for i in 0..protocol::FSK_ARITY {
             for (j, row) in sm.iter_mut().enumerate() {
-                let bit = (protocol::GRAY_CODE[i] & (4 >> j) != 0) as usize;
+                let bit = (protocol::GRAY_CODE_INV[i] & (4 >> j) != 0) as usize;
                 let v = data[i * FREQ_SCALE].into();
                 row[bit] += v * v;
             }
