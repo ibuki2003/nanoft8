@@ -7,6 +7,7 @@ use crate::Bitset;
 * Payload structure:
 * [Body] [CRC] [FEC]
 */
+pub const MESSAGE_LEN: usize = PAYLOAD_LEN + COSTAS_SIZE * 3;
 pub const PAYLOAD_LEN: usize = 58;
 pub const PAYLOAD_HALF_LEN: usize = PAYLOAD_LEN / 2;
 pub const PAYLOAD_BITS: usize = PAYLOAD_LEN * FSK_DEPTH; // 8-ary
@@ -30,3 +31,29 @@ pub mod message;
 
 pub mod crc;
 pub mod ldpc;
+
+pub fn encode_symbols(data: &FullMessageBits) -> [u8; MESSAGE_LEN] {
+    let mut ret = [0; MESSAGE_LEN];
+
+    // three markers
+    for (i, v) in MARKER_COSTAS.iter().enumerate() {
+        let v = *v as u8;
+        ret[i] = v;
+        ret[i + PAYLOAD_HALF_LEN + 7] = v;
+        ret[i + PAYLOAD_LEN + 14] = v;
+    }
+
+    for (i, x) in ret[7..PAYLOAD_HALF_LEN + 7].iter_mut().enumerate() {
+        let v = data.slice(i * FSK_DEPTH, FSK_DEPTH);
+        *x = GRAY_CODE[v as usize];
+    }
+    for (i, x) in ret[PAYLOAD_HALF_LEN + 14..PAYLOAD_LEN + 14]
+        .iter_mut()
+        .enumerate()
+    {
+        let j = i + PAYLOAD_HALF_LEN;
+        let v = data.slice(j * FSK_DEPTH, FSK_DEPTH);
+        *x = GRAY_CODE[v as usize];
+    }
+    ret
+}
