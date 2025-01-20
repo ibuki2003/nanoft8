@@ -5,6 +5,7 @@ use crate::{
 };
 use core::ops::RangeInclusive;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct C28(pub u32);
 
 // standard callsigns

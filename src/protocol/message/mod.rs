@@ -2,6 +2,7 @@ use crate::{util::write_slice, Bitset};
 
 pub mod chars;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Message {
     FreeText(F71),
     DXpedition,
@@ -338,6 +339,7 @@ pub use freetext::F71;
 use super::MessageBits;
 
 // TODO: implement these mocks
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct T71(Bitset<71>); // telemetry data
 
 // TODO: implement remaining types; now only frequently used types are implemented

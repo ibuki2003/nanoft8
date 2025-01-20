@@ -1,5 +1,6 @@
 use crate::{protocol::message::chars::Chars, util::trim_u8str};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct C58(pub u64);
 
 // standard callsigns

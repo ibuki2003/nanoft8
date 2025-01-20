@@ -1,5 +1,5 @@
 // NOTE: inner value is bit-reversed (i.e. 1<<31 represents the first bit (i.e. index 0))
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Bitset<const SIZE: usize>(pub [u32; num_words::<SIZE>()])
 where
     [u32; num_words::<SIZE>()]: Sized;

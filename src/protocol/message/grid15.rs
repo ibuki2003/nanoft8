@@ -1,7 +1,7 @@
 use crate::util::write_slice;
 
 // grid locator 4
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct G15(pub u16);
 
 impl G15 {

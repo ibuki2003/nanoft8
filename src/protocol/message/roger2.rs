@@ -1,6 +1,7 @@
 use crate::util::write_slice;
 
 // RRR message
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum R2 {
     BLANK,
     RRR,

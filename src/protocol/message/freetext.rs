@@ -2,6 +2,7 @@ use super::chars::Chars;
 use crate::Bitset;
 use core::hint::assert_unchecked;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct F71(pub Bitset<71>);
 
 impl F71 {
