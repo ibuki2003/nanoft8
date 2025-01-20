@@ -1,11 +1,28 @@
-// bitset that can store up to 96 bits
-// NOTE: inner value is bit-reversed (i.e. 1<<31 represents the first bit in the message)
-#[derive(Debug, Clone, Default)]
-pub struct Bitset(pub [u32; Self::LEN]);
+// NOTE: inner value is bit-reversed (i.e. 1<<31 represents the first bit (i.e. index 0))
+#[derive(Debug, Clone, Copy)]
+pub struct Bitset<const SIZE: usize>(pub [u32; num_words::<SIZE>()])
+where
+    [u32; num_words::<SIZE>()]: Sized;
 
-impl Bitset {
-    pub const SIZE: usize = 96;
-    pub const LEN: usize = (Self::SIZE + 31) / 32;
+pub const fn num_words<const SIZE: usize>() -> usize {
+    (SIZE + 31) / 32
+}
+
+impl<const SIZE: usize> Default for Bitset<SIZE>
+where
+    [u32; num_words::<SIZE>()]: Sized,
+{
+    fn default() -> Self {
+        Self([0; num_words::<SIZE>()])
+    }
+}
+
+impl<const SIZE: usize> Bitset<SIZE>
+where
+    [u32; num_words::<SIZE>()]: Sized,
+{
+    pub const SIZE: usize = SIZE;
+    pub const LEN: usize = num_words::<SIZE>();
 
     #[inline]
     pub fn slice(&self, start: usize, size: usize) -> u32 {
@@ -88,6 +105,31 @@ impl Bitset {
             self.0[word] &= !(1 << bit);
         }
     }
+
+    pub fn with_size<const NEW_SIZE: usize>(self) -> Bitset<NEW_SIZE>
+    where
+        [u32; num_words::<NEW_SIZE>()]: Sized,
+    {
+        let mut new = Bitset::<NEW_SIZE>::default();
+        let min = Self::LEN.min(num_words::<NEW_SIZE>());
+        new.0[..min].copy_from_slice(&self.0[..min]);
+        if NEW_SIZE < Self::SIZE {
+            if let Some(v) = new.0.last_mut() {
+                let mask = (!0) << (32 - (NEW_SIZE % 32));
+                *v &= mask;
+            }
+        }
+        new
+    }
+}
+
+impl<const SIZE: usize> From<[u32; num_words::<SIZE>()]> for Bitset<SIZE>
+where
+    [u32; num_words::<SIZE>()]: Sized,
+{
+    fn from(arr: [u32; num_words::<SIZE>()]) -> Self {
+        Self(arr)
+    }
 }
 
 #[inline]
@@ -106,7 +148,10 @@ fn set_range(v: &mut u32, start: usize, size: usize, value: u32) {
 }
 
 #[cfg(not(feature = "no_std"))]
-impl std::fmt::Display for Bitset {
+impl<const SIZE: usize> std::fmt::Display for Bitset<SIZE>
+where
+    [u32; num_words::<SIZE>()]: Sized,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         for i in 0..Self::SIZE {
             write!(f, "{}", if self.get(i) { "1" } else { "0" })?;

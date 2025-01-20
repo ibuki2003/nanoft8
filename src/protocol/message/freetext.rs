@@ -2,7 +2,7 @@ use super::chars::Chars;
 use crate::Bitset;
 use core::hint::assert_unchecked;
 
-pub struct F71(pub Bitset);
+pub struct F71(pub Bitset<71>);
 
 impl F71 {
     pub fn from_string(str: &mut [u8]) -> Option<Self> {

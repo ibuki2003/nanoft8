@@ -52,17 +52,17 @@ macro_rules! writes {
 }
 
 impl Message {
-    pub fn decode(bs: &Bitset) -> Option<Self> {
+    pub fn decode(bs: &MessageBits) -> Option<Self> {
         let i3 = bs.slice(74, 3);
         match i3 {
             0 => {
                 let n3 = bs.slice(71, 3);
                 match n3 {
-                    0 => Some(Self::FreeText(F71(bs.clone()))),
+                    0 => Some(Self::FreeText(F71(bs.with_size()))),
                     1 => Some(Self::DXpedition),
                     2 => Some(Self::FieldDay0),
                     3 => Some(Self::FieldDay1),
-                    4 => Some(Self::Telemetry(T71(bs.clone()))),
+                    4 => Some(Self::Telemetry(T71(bs.with_size()))),
                     // _ => panic!("invalid n3 value: {}", n3),
                     _ => None,
                 }
@@ -208,16 +208,16 @@ impl Message {
         }
     }
 
-    pub fn encode(&self) -> Bitset {
-        let mut ret = Bitset::default();
+    pub fn encode(&self) -> MessageBits {
+        let mut ret = MessageBits::default();
 
         match self {
             Message::FreeText(f71) => {
-                ret = f71.0.clone();
+                ret = f71.0.with_size();
                 ret.set_slice(71, 3, 0); // FreeText
             }
             Message::Telemetry(t71) => {
-                ret = t71.0.clone();
+                ret = t71.0.with_size();
                 ret.set_slice(71, 3, 4); // Telemetry
             }
             Message::StdMsg {
@@ -335,8 +335,10 @@ pub use roger2::R2;
 mod freetext;
 pub use freetext::F71;
 
+use super::MessageBits;
+
 // TODO: implement these mocks
-pub struct T71(Bitset); // telemetry data
+pub struct T71(Bitset<71>); // telemetry data
 
 // TODO: implement remaining types; now only frequently used types are implemented
 // pub struct G25(u32); // grid locator 6

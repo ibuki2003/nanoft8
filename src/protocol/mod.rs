@@ -1,3 +1,5 @@
+use crate::Bitset;
+
 /**
 * Packet structure:
 * [Marker] [Payload1] [Marker] [Payload2] [Marker]
@@ -19,6 +21,10 @@ pub const MARKER_COSTAS: [usize; COSTAS_SIZE] = [3, 1, 4, 0, 6, 5, 2];
 
 pub const GRAY_CODE: [u8; FSK_ARITY] = [0, 1, 3, 2, 5, 6, 4, 7];
 pub const GRAY_CODE_INV: [u8; FSK_ARITY] = [0b000, 0b001, 0b011, 0b010, 0b110, 0b100, 0b101, 0b111];
+
+pub type MessageBits = Bitset<BODY_BITS>;
+pub type MessageBitsWithCRC = Bitset<{ BODY_BITS + CRC_BITS }>;
+pub type FullMessageBits = Bitset<PAYLOAD_BITS>;
 
 pub mod message;
 

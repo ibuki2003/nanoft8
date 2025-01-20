@@ -1,10 +1,8 @@
-use nanoft8::{
-    protocol::{
-        crc::{add_crc, check_crc},
-        ldpc,
-        message::{Message, C28, G15},
-    },
-    Bitset,
+#![feature(generic_const_exprs)]
+use nanoft8::protocol::{
+    crc::{add_crc, check_crc},
+    ldpc,
+    message::{callsign::C28, Message, G15},
 };
 
 fn main() {
@@ -22,32 +20,28 @@ fn main() {
     let str = String::from_utf8_lossy(&str);
     println!("msg: {}", str);
 
-    let mut bs = msg.encode();
+    let bs = msg.encode();
+    println!("{:p}", bs.0.as_ptr());
 
-    add_crc(&mut bs);
+    let bs = add_crc(bs);
+    println!("{:p}", bs.0.as_ptr());
 
-    let mut buf = [false; 174];
-    ldpc::encode(&bs, &mut buf);
+    let buf = ldpc::encode(&bs);
 
     // println!("encoded: {}", bs);
-    let str = buf
-        .iter()
-        .map(|&b| if b { '1' } else { '0' })
-        .collect::<String>();
-    println!("encoded: {}", str);
+    println!("encoded: {}", buf);
 
-    let llr = buf
-        .iter()
-        .map(|&b| if b { 1.0 } else { -1.0 })
+    let llr = (0..174)
+        .map(|i| buf.get(i))
+        .map(|b| if b { 1.0 } else { -1.0 })
         .collect::<Vec<_>>();
     println!("err: {}", ldpc::check(&buf));
 
-    let mut bs = Bitset::default();
-    ldpc::solve(&llr, &mut bs);
+    let (bs, _err) = ldpc::solve(&llr);
 
     println!("crc: {:?}", check_crc(&bs));
 
-    let msg = Message::decode(&bs).unwrap();
+    let msg = Message::decode(&bs.with_size()).unwrap();
     let mut str = [0; 64];
     msg.write_str(&mut str, None::<&()>);
     let str = String::from_utf8_lossy(&str);

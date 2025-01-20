@@ -23,12 +23,12 @@ impl C58 {
         let mut v = self.0;
         let mut len = 0;
         for c in out.iter_mut() {
-            *c = Chars::AlnumSs.get((v % 38) as u8);
-            v /= 38;
-            len += 1;
             if v == 0 {
                 break;
             }
+            *c = Chars::AlnumSs.get((v % 38) as u8);
+            v /= 38;
+            len += 1;
         }
         if v != 0 {
             return None;

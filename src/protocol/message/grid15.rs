@@ -102,7 +102,7 @@ mod tests {
         for (str, g) in testcases {
             let n = g.write_str(&mut buf).unwrap();
             let buf = &buf[..n];
-            assert_eq!(String::from_utf8_lossy(&buf), String::from_utf8_lossy(*str));
+            assert_eq!(String::from_utf8_lossy(buf), String::from_utf8_lossy(str));
         }
     }
 }

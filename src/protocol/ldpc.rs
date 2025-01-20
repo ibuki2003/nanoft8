@@ -1,5 +1,5 @@
-use super::{BODY_BITS, CRC_BITS, PAYLOAD_BITS};
-use crate::{float::FloatS, Bitset};
+use super::{FullMessageBits, MessageBitsWithCRC, BODY_BITS, CRC_BITS, PAYLOAD_BITS};
+use crate::float::FloatS;
 
 #[cfg(feature = "no_std")]
 use micromath::F32Ext;
@@ -22,13 +22,12 @@ const MSG_BITS: usize = BODY_BITS + CRC_BITS;
 const MAX_ITER: usize = 100;
 const MAX_ITER_NO_PROGRESS: usize = 10;
 
-type FullMessageBits = [bool; V_SIZE];
 pub fn check(message: &FullMessageBits) -> u8 {
     let mut count = 0;
     for row in TABLE_CV.iter() {
         let sum = row.iter().fold(false, |acc, j| {
             if (*j as usize) < V_SIZE {
-                acc ^ message[*j as usize]
+                acc ^ message.get(*j as usize)
             } else {
                 acc
             }
@@ -44,7 +43,7 @@ pub fn check(message: &FullMessageBits) -> u8 {
 // solve the parity check equations
 // out: the message bits
 // returns the number of errors
-pub fn solve<F: FloatS>(message: &[F], out: &mut Bitset) -> u8 {
+pub fn solve<F: FloatS>(message: &[F]) -> (MessageBitsWithCRC, u8) {
     debug_assert!(message.len() == V_SIZE);
 
     let mut message_f32 = [0.0f32; V_SIZE];
@@ -52,7 +51,7 @@ pub fn solve<F: FloatS>(message: &[F], out: &mut Bitset) -> u8 {
         message_f32[i] = b.into();
     }
 
-    let mut plain = [false; V_SIZE];
+    let mut plain = FullMessageBits::default();
 
     let mut tov = [[0.0f32; TABLE_VC_LEN]; V_SIZE];
     let mut toc = [[0.0f32; TABLE_CV_LEN]; C_SIZE];
@@ -65,7 +64,7 @@ pub fn solve<F: FloatS>(message: &[F], out: &mut Bitset) -> u8 {
         // check
 
         for i in 0..V_SIZE {
-            plain[i] = (message_f32[i] + tov[i].iter().sum::<f32>()) > 0.0;
+            plain.set(i, (message_f32[i] + tov[i].iter().sum::<f32>()) > 0.0);
         }
 
         last_err = check(&plain);
@@ -115,15 +114,11 @@ pub fn solve<F: FloatS>(message: &[F], out: &mut Bitset) -> u8 {
             }
         }
     }
-    for (i, &b) in plain[..MSG_BITS].iter().enumerate() {
-        out.set(i, b);
-    }
-    last_err
+    (plain.with_size(), last_err)
 }
 
-pub fn encode(msg: &Bitset, out: &mut [bool]) {
-    assert_eq!(out.len(), V_SIZE);
-    out.fill(false);
+pub fn encode(msg: &MessageBitsWithCRC) -> FullMessageBits {
+    let mut out = msg.with_size();
 
     for i in 0..MSG_BITS {
         if !msg.get(i) {
@@ -131,17 +126,17 @@ pub fn encode(msg: &Bitset, out: &mut [bool]) {
         }
         // here msg[i] is set
 
-        // body part
-        out[i] = true;
-
         // FEC part
-        for j in 0..C_SIZE {
-            let bit = TABLE_GEN[i][j / 32] >> (31 - j % 32) & 1 != 0;
-            if bit {
-                out[j + MSG_BITS] ^= true;
-            }
+        let mut buf = [0u32; 4];
+        for (j, r) in TABLE_GEN[i].iter().enumerate() {
+            buf[j] |= r >> 27;
+            buf[j + 1] |= r << 5;
+        }
+        for (x, y) in buf.iter().zip(out.0[2..6].iter_mut()) {
+            *y ^= *x;
         }
     }
+    out
 }
 
 const EOL: u8 = 0xff; // marker for the end of the table row
@@ -525,20 +520,19 @@ mod tests {
     #[test]
     fn test_gen() {
         // because of linearity, testing each row is enough
-        let mut arr: FullMessageBits = [false; V_SIZE];
         for i in 0..MSG_BITS {
-            let mut msg = Bitset::default();
+            let mut msg = MessageBitsWithCRC::default();
             msg.set(i, true);
-            encode(&msg, &mut arr);
+            let arr = encode(&msg);
             assert_eq!(check(&arr), 0);
         }
 
         // all 1s
-        let mut msg = Bitset::default();
+        let mut msg = MessageBitsWithCRC::default();
         for i in 0..MSG_BITS {
             msg.set(i, true);
         }
-        encode(&msg, &mut arr);
+        let arr = encode(&msg);
         assert_eq!(check(&arr), 0);
     }
 }

@@ -1,13 +1,13 @@
+#![feature(generic_const_exprs)]
 use chrono::Timelike as _;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait as _};
 use nanoft8::{
-    decoder::{Candidate, Decoder},
+    decoder::Decoder,
     protocol::{
         self,
         crc::check_crc,
         message::{callsign::hash::CallsignHashTable, Message},
     },
-    Bitset,
 };
 use num_complex::Complex32;
 use std::collections::BTreeMap;
@@ -186,8 +186,7 @@ fn print_candidates(dec: &Dec, hashtable: &mut impl CallsignHashTable) {
         }
         cnt += 1;
 
-        let mut bs = Bitset::default();
-        let err = protocol::ldpc::solve(&i.data, &mut bs);
+        let (bs, err) = protocol::ldpc::solve(&i.data);
 
         let res = check_crc(&bs);
 
@@ -200,6 +199,7 @@ fn print_candidates(dec: &Dec, hashtable: &mut impl CallsignHashTable) {
             continue;
         }
 
+        let bs = bs.with_size::<77>();
         let msg = Message::decode(&bs);
 
         let str = msg

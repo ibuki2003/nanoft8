@@ -1,14 +1,12 @@
+#![feature(generic_const_exprs)]
 use nanoft8::{
     protocol::{
-        message::{
-            callsign::{hash::CallsignHashTable as _, hashtable::HashTable},
-            Message,
-        },
+        message::{callsign::hashtable::HashTable, Message},
         BODY_BITS,
     },
     Bitset,
 };
-use std::{collections::BTreeMap, io::BufRead as _};
+use std::io::BufRead as _;
 
 fn main() {
     let mut bs = Bitset::default();
